@@ -38,7 +38,7 @@ build('anapi', 'docker-host', finalHook) {
         }
       }
       runStage('test') {
-        sh "make wc_test"
+        sh "make wdeps_test"
       }
     }
 
