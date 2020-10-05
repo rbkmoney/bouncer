@@ -147,8 +147,7 @@ stop_bouncer(C) ->
     config().
 
 init_per_testcase(Name, C) ->
-    C1 = [{testcase, Name} | C],
-    [{client, mk_client(C1)} | C1].
+    [{testcase, Name} | C].
 
 -spec end_per_testcase(atom(), config()) ->
     config().
@@ -176,17 +175,17 @@ missing_ruleset_notfound(C) ->
     MissingRulesetID = "missing_ruleset",
     ?assertThrow(
         #bdcs_RulesetNotFound{},
-        call_judge(MissingRulesetID, ?CONTEXT(#{}), ?CONFIG(client, C))
+        call_judge(MissingRulesetID, ?CONTEXT(#{}), mk_client(C))
     ).
 
 incorrect_ruleset_invalid(C) ->
     ?assertThrow(
         #bdcs_InvalidRuleset{},
-        call_judge("trivial/incorrect1", ?CONTEXT(#{}), ?CONFIG(client, C))
+        call_judge("trivial/incorrect1", ?CONTEXT(#{}), mk_client(C))
     ),
     ?assertThrow(
         #bdcs_InvalidRuleset{},
-        call_judge("trivial/incorrect2", ?CONTEXT(#{}), ?CONFIG(client, C))
+        call_judge("trivial/incorrect2", ?CONTEXT(#{}), mk_client(C))
     ).
 
 missing_content_invalid_context(C) ->
@@ -194,7 +193,7 @@ missing_content_invalid_context(C) ->
     Context = ?CONTEXT(#{<<"missing">> => NoContentFragment}),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
+        call_judge(?API_RULESET_ID, Context, mk_client(C))
     ).
 
 junk_content_invalid_context(C) ->
@@ -203,7 +202,7 @@ junk_content_invalid_context(C) ->
     Context = ?CONTEXT(#{<<"missing">> => JunkFragment}),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
+        call_judge(?API_RULESET_ID, Context, mk_client(C))
     ).
 
 conflicting_context_invalid(C) ->
@@ -231,7 +230,7 @@ conflicting_context_invalid(C) ->
     }),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
+        call_judge(?API_RULESET_ID, Context, mk_client(C))
     ).
 
 distinct_sets_context_valid(C) ->
@@ -271,7 +270,7 @@ distinct_sets_context_valid(C) ->
     }),
     ?assertMatch(
         #bdcs_Judgement{},
-        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
+        call_judge(?API_RULESET_ID, Context, mk_client(C))
     ).
 
 %%
@@ -294,7 +293,7 @@ allowed_create_invoice_shop_manager(C) ->
     Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
         ?JUDGEMENT(allowed, [?ASSERTION(<<"user_has_role">>)]),
-        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
+        call_judge(?API_RULESET_ID, Context, mk_client(C))
     ).
 
 forbidden_expired(C) ->
@@ -308,18 +307,18 @@ forbidden_expired(C) ->
     Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
         ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_expired">>)]),
-        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
+        call_judge(?API_RULESET_ID, Context, mk_client(C))
     ).
 
 forbidden_w_empty_context(C) ->
     EmptyFragment = mk_ctx_v1_fragment(#{}),
     ?assertMatch(
         ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_required">>)]),
-        call_judge(?API_RULESET_ID, ?CONTEXT(#{}), ?CONFIG(client, C))
+        call_judge(?API_RULESET_ID, ?CONTEXT(#{}), mk_client(C))
     ),
     ?assertMatch(
         ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_required">>)]),
-        call_judge(?API_RULESET_ID, ?CONTEXT(#{<<"empty">> => EmptyFragment}), ?CONFIG(client, C))
+        call_judge(?API_RULESET_ID, ?CONTEXT(#{<<"empty">> => EmptyFragment}), mk_client(C))
     ).
 
 mk_user(UserID, UserOrgs) ->
