@@ -334,9 +334,6 @@ mk_user_org(OrgID, OwnerID, Roles) ->
         roles => Roles
     }.
 
-mk_role(RoleID) ->
-    #{id => RoleID}.
-
 mk_role(RoleID, ShopID) ->
     #{id => RoleID, scope => #{shop => #{id => ShopID}}}.
 
