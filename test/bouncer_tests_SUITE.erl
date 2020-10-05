@@ -22,6 +22,7 @@
 -export([allowed_create_invoice_shop_manager/1]).
 -export([forbidden_w_empty_context/1]).
 -export([forbidden_expired/1]).
+-export([forbidden_blacklisted_ip/1]).
 
 -export([connect_failed_means_unavailable/1]).
 -export([connect_timeout_means_unavailable/1]).
@@ -69,6 +70,7 @@ groups() ->
         {rules_authz_api, [], [
             allowed_create_invoice_shop_manager,
             forbidden_expired,
+            forbidden_blacklisted_ip,
             forbidden_w_empty_context
         ]},
         {network_error_mapping, [], [
@@ -277,6 +279,7 @@ distinct_sets_context_valid(C) ->
 
 -spec allowed_create_invoice_shop_manager(config()) -> ok.
 -spec forbidden_expired(config()) -> ok.
+-spec forbidden_blacklisted_ip(config()) -> ok.
 -spec forbidden_w_empty_context(config()) -> ok.
 
 allowed_create_invoice_shop_manager(C) ->
@@ -307,6 +310,19 @@ forbidden_expired(C) ->
     Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
         ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_expired">>)]),
+        call_judge(?API_RULESET_ID, Context, mk_client(C))
+    ).
+
+forbidden_blacklisted_ip(C) ->
+    Fragment = lists:foldl(fun maps:merge/2, #{}, [
+        mk_auth_session_token(),
+        mk_env(),
+        % See test/policies/authz/blacklists/source-ip-range/data.json#L42
+        #{requester => #{ip => <<"91.41.147.55">>}}
+    ]),
+    Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
+    ?assertMatch(
+        ?JUDGEMENT(forbidden, [?ASSERTION(<<"ip_range_blacklisted">>)]),
         call_judge(?API_RULESET_ID, Context, mk_client(C))
     ).
 
