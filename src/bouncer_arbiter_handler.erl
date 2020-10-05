@@ -64,6 +64,8 @@ handle_judge(RulesetID, ContextIn, St0) ->
             handle_network_error(Reason, St2)
     end.
 
+-spec handle_network_error(_Reason, st()) ->
+    no_return().
 handle_network_error({unavailable, Reason}, St) ->
     ok = handle_judgement_beat({failed, {unavailable, Reason}}, St),
     throw({woody, system, {external, resource_unavailable, genlib:format(Reason)}});
@@ -74,7 +76,7 @@ handle_network_error({timeout, Reason}, St) ->
 %%
 
 -type fragment_id()       :: binary().
--type fragment_metadata() :: #{atom => _}.
+-type fragment_metadata() :: #{atom() => _}.
 
 -type thrift_judgement()     :: bouncer_decisions_thrift:'Judgement'().
 -type thrift_context()       :: bouncer_decisions_thrift:'Context'().
@@ -137,7 +139,6 @@ decode_context(#bdcs_Context{fragments = FragmentsIn}, St0) ->
 -spec decode_fragments(#{fragment_id() => thrift_fragment()}, st()) ->
     {#{fragment_id() => bouncer_context:ctx()}, st()}.
 decode_fragments(Fragments, St0) ->
-
     {Ctxs, Errors, PulseMeta} = maps:fold(
         fun (ID, Fragment, {CtxAcc, ErrorAcc, PulseMetaAcc}) ->
             Type = Fragment#bctx_ContextFragment.type,

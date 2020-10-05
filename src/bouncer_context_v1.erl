@@ -23,7 +23,7 @@
 
 -type thrift_ctx_fragment() :: bouncer_context_v1_thrift:'ContextFragment'().
 
--spec decode(format(), _Content) ->
+-spec decode(format(), _Content :: binary()) ->
     {ok, bouncer_context:ctx(), metadata()} | {error, _Reason}.
 
 decode(thrift, Content) ->
