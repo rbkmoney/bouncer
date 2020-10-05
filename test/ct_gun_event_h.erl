@@ -33,116 +33,116 @@
 
 init(Event, State) ->
     _ = ct:pal("~p [gun] init: ~p", [self(), Event]),
-	State.
+    State.
 
 domain_lookup_start(Event, State) ->
     _ = ct:pal("~p [gun] domain lookup start: ~p", [self(), Event]),
-	State.
+    State.
 
 domain_lookup_end(Event, State) ->
     _ = ct:pal("~p [gun] domain lookup end: ~p", [self(), Event]),
-	State.
+    State.
 
 connect_start(Event, State) ->
     _ = ct:pal("~p [gun] connect start: ~p", [self(), Event]),
-	State.
+    State.
 
 connect_end(Event, State) ->
     _ = ct:pal("~p [gun] connect end: ~p", [self(), Event]),
-	State.
+    State.
 
 tls_handshake_start(Event, State) ->
     _ = ct:pal("~p [gun] tls handshake start: ~p", [self(), Event]),
-	State.
+    State.
 
 tls_handshake_end(Event, State) ->
     _ = ct:pal("~p [gun] tls handshake end: ~p", [self(), Event]),
-	State.
+    State.
 
 request_start(Event, State) ->
     _ = ct:pal("~p [gun] request start: ~p", [self(), Event]),
-	State.
+    State.
 
 request_headers(Event, State) ->
     _ = ct:pal("~p [gun] request headers: ~p", [self(), Event]),
-	State.
+    State.
 
 request_end(Event, State) ->
     _ = ct:pal("~p [gun] request end: ~p", [self(), Event]),
-	State.
+    State.
 
 push_promise_start(Event, State) ->
     _ = ct:pal("~p [gun] push promise start: ~p", [self(), Event]),
-	State.
+    State.
 
 push_promise_end(Event, State) ->
     _ = ct:pal("~p [gun] push promise end: ~p", [self(), Event]),
-	State.
+    State.
 
 response_start(Event, State) ->
     _ = ct:pal("~p [gun] response start: ~p", [self(), Event]),
-	State.
+    State.
 
 response_inform(Event, State) ->
     _ = ct:pal("~p [gun] response inform: ~p", [self(), Event]),
-	State.
+    State.
 
 response_headers(Event, State) ->
     _ = ct:pal("~p [gun] response headers: ~p", [self(), Event]),
-	State.
+    State.
 
 response_trailers(Event, State) ->
     _ = ct:pal("~p [gun] response trailers: ~p", [self(), Event]),
-	State.
+    State.
 
 response_end(Event, State) ->
     _ = ct:pal("~p [gun] response end: ~p", [self(), Event]),
-	State.
+    State.
 
 ws_upgrade(Event, State) ->
     _ = ct:pal("~p [gun] ws upgrade: ~p", [self(), Event]),
-	State.
+    State.
 
 ws_recv_frame_start(Event, State) ->
     _ = ct:pal("~p [gun] ws recv frame start: ~p", [self(), Event]),
-	State.
+    State.
 
 ws_recv_frame_header(Event, State) ->
     _ = ct:pal("~p [gun] ws recv frame header: ~p", [self(), Event]),
-	State.
+    State.
 
 ws_recv_frame_end(Event, State) ->
     _ = ct:pal("~p [gun] ws recv frame end: ~p", [self(), Event]),
-	State.
+    State.
 
 ws_send_frame_start(Event, State) ->
     _ = ct:pal("~p [gun] ws send frame start: ~p", [self(), Event]),
-	State.
+    State.
 
 ws_send_frame_end(Event, State) ->
     _ = ct:pal("~p [gun] ws send frame end: ~p", [self(), Event]),
-	State.
+    State.
 
 protocol_changed(Event, State) ->
     _ = ct:pal("~p [gun] protocol changed: ~p", [self(), Event]),
-	State.
+    State.
 
 transport_changed(Event, State) ->
     _ = ct:pal("~p [gun] transport changed: ~p", [self(), Event]),
-	State.
+    State.
 
 origin_changed(Event, State) ->
     _ = ct:pal("~p [gun] origin changed: ~p", [self(), Event]),
-	State.
+    State.
 
 cancel(Event, State) ->
     _ = ct:pal("~p [gun] cancel: ~p", [self(), Event]),
-	State.
+    State.
 
 disconnect(Event, State) ->
     _ = ct:pal("~p [gun] disconnect: ~p", [self(), Event]),
-	State.
+    State.
 
 terminate(Event, State) ->
     _ = ct:pal("~p [gun] terminate: ~p", [self(), Event]),
-	State.
+    State.

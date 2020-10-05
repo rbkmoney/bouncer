@@ -203,13 +203,13 @@ stop_acceptor(St = #st{acceptor = Pid}) when is_pid(Pid) ->
     end.
 
 loop_acceptor(Parent, LSock) ->
-	_ = case ranch_tcp:accept(LSock, infinity) of
-		{ok, CSock} ->
+    _ = case ranch_tcp:accept(LSock, infinity) of
+        {ok, CSock} ->
             _ = ct:pal("accepted ~p from ~p", [CSock, ranch_tcp:peername(CSock)]),
             _ = spawn_proxy_connection(Parent, CSock),
             loop_acceptor(Parent, LSock);
-		{error, Reason} ->
-			exit(Reason)
+        {error, Reason} ->
+            exit(Reason)
     end.
 
 %%
