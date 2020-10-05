@@ -51,20 +51,17 @@ infer_judgement(Document) ->
         {ok, _} ->
             Allowed = maps:get(<<"allowed">>, Document, []),
             Forbidden = maps:get(<<"forbidden">>, Document, []),
-            case Forbidden of
-                [_ | _] ->
-                    {ok, {forbidden, extract_assertions(Forbidden)}};
-                [] ->
-                    case Allowed of
-                        [_ | _] ->
-                            {ok, {allowed, extract_assertions(Allowed)}};
-                        [] ->
-                            {ok, {forbidden, []}}
-                    end
-            end;
+            {ok, infer_judgement(Forbidden, Allowed)};
         {error, Reason} ->
             {error, {ruleset_invalid, Reason}}
     end.
+
+infer_judgement(Forbidden = [_ | _], _Allowed) ->
+    {forbidden, extract_assertions(Forbidden)};
+infer_judgement(_Forbidden = [], Allowed = [_ | _]) ->
+    {allowed, extract_assertions(Allowed)};
+infer_judgement(_Forbidden = [], _Allowed = []) ->
+    {forbidden, []}.
 
 extract_assertions(Assertions) ->
     [extract_assertion(E) || E <- Assertions].

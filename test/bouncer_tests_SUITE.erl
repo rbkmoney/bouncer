@@ -36,7 +36,7 @@
 -type group_name() :: atom().
 -type test_case_name() :: atom().
 
--define(config(Key, C), (element(2, lists:keyfind(Key, 1, C)))).
+-define(CONFIG(Key, C), (element(2, lists:keyfind(Key, 1, C)))).
 
 %%
 
@@ -92,7 +92,7 @@ init_per_suite(C) ->
 -spec end_per_suite(config()) ->
     ok.
 end_per_suite(C) ->
-    genlib_app:stop_unload_applications(?config(suite_apps, C)).
+    genlib_app:stop_unload_applications(?CONFIG(suite_apps, C)).
 
 -spec init_per_group(group_name(), config()) ->
     config().
@@ -158,10 +158,10 @@ end_per_testcase(_Name, _C) ->
 
 %%
 
--define(bdcs_context(Fragments), #bdcs_Context{fragments = Fragments}).
--define(bdcs_assertion(Code), #bdcs_Assertion{code = Code}).
--define(bdcs_judgement(Resolution), #bdcs_Judgement{resolution = Resolution}).
--define(bdcs_judgement(Resolution, Assertions),
+-define(CONTEXT(Fragments), #bdcs_Context{fragments = Fragments}).
+-define(ASSERTION(Code), #bdcs_Assertion{code = Code}).
+-define(JUDGEMENT(Resolution), #bdcs_Judgement{resolution = Resolution}).
+-define(JUDGEMENT(Resolution, Assertions),
     #bdcs_Judgement{resolution = Resolution, assertions = Assertions}
 ).
 
@@ -176,32 +176,34 @@ missing_ruleset_notfound(C) ->
     MissingRulesetID = "missing_ruleset",
     ?assertThrow(
         #bdcs_RulesetNotFound{},
-        call_judge(MissingRulesetID, ?bdcs_context(#{}), ?config(client, C))
+        call_judge(MissingRulesetID, ?CONTEXT(#{}), ?CONFIG(client, C))
     ).
 
 incorrect_ruleset_invalid(C) ->
     ?assertThrow(
         #bdcs_InvalidRuleset{},
-        call_judge("trivial/incorrect1", ?bdcs_context(#{}), ?config(client, C))
+        call_judge("trivial/incorrect1", ?CONTEXT(#{}), ?CONFIG(client, C))
     ),
     ?assertThrow(
         #bdcs_InvalidRuleset{},
-        call_judge("trivial/incorrect2", ?bdcs_context(#{}), ?config(client, C))
+        call_judge("trivial/incorrect2", ?CONTEXT(#{}), ?CONFIG(client, C))
     ).
 
 missing_content_invalid_context(C) ->
     NoContentFragment = #bctx_ContextFragment{type = v1_thrift_binary},
+    Context = ?CONTEXT(#{<<"missing">> => NoContentFragment}),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, ?bdcs_context(#{<<"missing">> => NoContentFragment}), ?config(client, C))
+        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
     ).
 
 junk_content_invalid_context(C) ->
     Junk = <<"STOP RIGHT THERE YOU CRIMINAL SCUM!">>,
     JunkFragment = #bctx_ContextFragment{type = v1_thrift_binary, content = Junk},
+    Context = ?CONTEXT(#{<<"missing">> => JunkFragment}),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, ?bdcs_context(#{<<"missing">> => JunkFragment}), ?config(client, C))
+        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
     ).
 
 conflicting_context_invalid(C) ->
@@ -223,13 +225,13 @@ conflicting_context_invalid(C) ->
             ip => <<"1.2.3.4">>
         }
     },
-    Context = ?bdcs_context(#{
+    Context = ?CONTEXT(#{
         <<"frag1">> => mk_ctx_v1_fragment(Fragment1),
         <<"frag2">> => mk_ctx_v1_fragment(Fragment2)
     }),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, Context, ?config(client, C))
+        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
     ).
 
 distinct_sets_context_valid(C) ->
@@ -263,13 +265,13 @@ distinct_sets_context_valid(C) ->
             ])
         }
     },
-    Context = ?bdcs_context(#{
+    Context = ?CONTEXT(#{
         <<"frag1">> => mk_ctx_v1_fragment(Fragment1),
         <<"frag2">> => mk_ctx_v1_fragment(Fragment2)
     }),
     ?assertMatch(
         #bdcs_Judgement{},
-        call_judge(?API_RULESET_ID, Context, ?config(client, C))
+        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
     ).
 
 %%
@@ -289,10 +291,10 @@ allowed_create_invoice_shop_manager(C) ->
             ]))
         ]))
     ]),
-    Context = ?bdcs_context(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
+    Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
-        ?bdcs_judgement(allowed, [?bdcs_assertion(<<"user_has_role">>)]),
-        call_judge(?API_RULESET_ID, Context, ?config(client, C))
+        ?JUDGEMENT(allowed, [?ASSERTION(<<"user_has_role">>)]),
+        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
     ).
 
 forbidden_expired(C) ->
@@ -303,21 +305,21 @@ forbidden_expired(C) ->
             expiration => <<"1991-12-26T17:00:00Z">> % ☭😢
         }
     }),
-    Context = ?bdcs_context(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
+    Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
-        ?bdcs_judgement(forbidden, [?bdcs_assertion(<<"auth_expired">>)]),
-        call_judge(?API_RULESET_ID, Context, ?config(client, C))
+        ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_expired">>)]),
+        call_judge(?API_RULESET_ID, Context, ?CONFIG(client, C))
     ).
 
 forbidden_w_empty_context(C) ->
     EmptyFragment = mk_ctx_v1_fragment(#{}),
     ?assertMatch(
-        ?bdcs_judgement(forbidden, [?bdcs_assertion(<<"auth_required">>)]),
-        call_judge(?API_RULESET_ID, ?bdcs_context(#{}), ?config(client, C))
+        ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_required">>)]),
+        call_judge(?API_RULESET_ID, ?CONTEXT(#{}), ?CONFIG(client, C))
     ),
     ?assertMatch(
-        ?bdcs_judgement(forbidden, [?bdcs_assertion(<<"auth_required">>)]),
-        call_judge(?API_RULESET_ID, ?bdcs_context(#{<<"empty">> => EmptyFragment}), ?config(client, C))
+        ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_required">>)]),
+        call_judge(?API_RULESET_ID, ?CONTEXT(#{<<"empty">> => EmptyFragment}), ?CONFIG(client, C))
     ).
 
 mk_user(UserID, UserOrgs) ->
@@ -387,7 +389,7 @@ connect_failed_means_unavailable(C) ->
     try
         ?assertError(
             {woody_error, {external, resource_unavailable, _}},
-            call_judge(?API_RULESET_ID, ?bdcs_context(#{}), Client)
+            call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client)
         )
     after
         stop_bouncer(C1)
@@ -395,11 +397,7 @@ connect_failed_means_unavailable(C) ->
 
 connect_timeout_means_unavailable(C) ->
     {ok, Proxy} = ct_proxy:start_link(?OPA_ENDPOINT, #{listen => ignore}),
-    C1 = start_bouncer([{opa, #{
-        endpoint => ct_proxy:endpoint(Proxy),
-        transport => tcp,
-        event_handler => {ct_gun_event_h, []}
-    }}], C),
+    C1 = start_proxy_bouncer(Proxy, C),
     Client = mk_client(C1),
     try
         ?assertError(
@@ -408,7 +406,7 @@ connect_timeout_means_unavailable(C) ->
             % localhost. This is why we expect `result_unknown` here instead of
             % `resource_unavailable`.
             {woody_error, {external, result_unknown, _}},
-            call_judge(?API_RULESET_ID, ?bdcs_context(#{}), Client)
+            call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client)
         )
     after
         stop_bouncer(C1)
@@ -416,25 +414,29 @@ connect_timeout_means_unavailable(C) ->
 
 request_timeout_means_unknown(C) ->
     {ok, Proxy} = ct_proxy:start_link(?OPA_ENDPOINT),
-    C1 = start_bouncer([{opa, #{
-        endpoint => ct_proxy:endpoint(Proxy),
-        transport => tcp,
-        event_handler => {ct_gun_event_h, []}
-    }}], C),
+    C1 = start_proxy_bouncer(Proxy, C),
     Client = mk_client(C1),
     ok = change_proxy_mode(Proxy, connection, ignore, C),
     try
         ?assertError(
             {woody_error, {external, result_unknown, _}},
-            call_judge(?API_RULESET_ID, ?bdcs_context(#{}), Client)
+            call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client)
         )
     after
         stop_bouncer(C1)
     end.
 
+start_proxy_bouncer(Proxy, C) ->
+    start_bouncer([{opa, #{
+        endpoint => ct_proxy:endpoint(Proxy),
+        transport => tcp,
+        event_handler => {ct_gun_event_h, []}
+    }}], C).
+
 change_proxy_mode(Proxy, Scope, Mode, C) ->
     ModeWas = ct_proxy:mode(Proxy, Scope, Mode),
-    _ = ct:pal(debug, "[~p] set proxy ~p from '~p' to '~p'", [?config(testcase, C), Scope, ModeWas, Mode]),
+    _ = ct:pal(debug, "[~p] set proxy ~p from '~p' to '~p'",
+        [?CONFIG(testcase, C), Scope, ModeWas, Mode]),
     ok.
 
 %%
@@ -449,8 +451,8 @@ mk_ctx_v1_fragment(Context) ->
 %%
 
 mk_client(C) ->
-    WoodyCtx = woody_context:new(genlib:to_binary(?config(testcase, C))),
-    ServiceURLs = ?config(service_urls, C),
+    WoodyCtx = woody_context:new(genlib:to_binary(?CONFIG(testcase, C))),
+    ServiceURLs = ?CONFIG(service_urls, C),
     {WoodyCtx, ServiceURLs}.
 
 call_judge(RulesetID, Context, Client) ->

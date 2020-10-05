@@ -18,11 +18,10 @@
 
 %%
 
--define(THRIFT_MODULE, bouncer_context_v1_thrift).
--define(THRIFT_TYPENAME, 'ContextFragment').
--define(THRIFT_TYPE, {struct, struct, {?THRIFT_MODULE, ?THRIFT_TYPENAME}}).
+-define(THRIFT_TYPE,
+    {struct, struct, {bouncer_context_v1_thrift, 'ContextFragment'}}).
 
--type thrift_ctx_fragment() :: ?THRIFT_MODULE:?THRIFT_TYPENAME().
+-type thrift_ctx_fragment() :: bouncer_context_v1_thrift:'ContextFragment'().
 
 -spec decode(format(), _Content) ->
     {ok, bouncer_context:ctx(), metadata()} | {error, _Reason}.
@@ -55,7 +54,8 @@ from_thrift(#bctx_v1_ContextFragment{} = Ctx0) ->
     {ok, from_thrift_context(Ctx1), Metadata}.
 
 from_thrift_context(Ctx) ->
-    {struct, _, [_VsnField | StructDef]} = ?THRIFT_MODULE:struct_info(?THRIFT_TYPENAME),
+    {struct, _, [_VsnField | StructDef]} =
+        bouncer_context_v1_thrift:struct_info('ContextFragment'),
     from_thrift_struct(StructDef, Ctx, 3, #{}).
 
 from_thrift_struct(StructDef, Struct) ->
@@ -114,7 +114,7 @@ encode(thrift, Context) ->
 -spec to_thrift(bouncer_context:ctx()) ->
     thrift_ctx_fragment() | no_return().
 to_thrift(Context) ->
-    {struct, _, StructDef} = ?THRIFT_MODULE:struct_info(?THRIFT_TYPENAME),
+    {struct, _, StructDef} = bouncer_context_v1_thrift:struct_info('ContextFragment'),
     to_thrift_struct(StructDef, Context, #bctx_v1_ContextFragment{}).
 
 to_thrift_struct([{Idx, _Req, Type, Name, Default} | Rest], Map, Acc) ->
