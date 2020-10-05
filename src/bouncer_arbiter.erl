@@ -34,7 +34,6 @@ judge(RulesetID, Context) ->
             Location = join_path(RulesetID, <<"/assertions">>),
             case request_opa_document(Location, Context, Client) of
                 {ok, Document} ->
-                    ct:pal("*** DOC = ~p", [Document]),
                     infer_judgement(Document);
                 {error, notfound} ->
                     {error, ruleset_notfound};
