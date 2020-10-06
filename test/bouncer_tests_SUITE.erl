@@ -51,6 +51,7 @@
 all() ->
     [
         {group, general},
+        {group, rules_authz_api},
         {group, network_error_mapping}
     ].
 
