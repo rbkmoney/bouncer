@@ -58,8 +58,7 @@ all() ->
     [{group_name(), list(), [test_case_name()]}].
 groups() ->
     [
-        % {general, [parallel], [
-        {general, [], [
+        {general, [parallel], [
             missing_ruleset_notfound,
             incorrect_ruleset_invalid,
             missing_content_invalid_context,
@@ -67,7 +66,7 @@ groups() ->
             conflicting_context_invalid,
             distinct_sets_context_valid
         ]},
-        {rules_authz_api, [], [
+        {rules_authz_api, [parallel], [
             allowed_create_invoice_shop_manager,
             forbidden_expired,
             forbidden_blacklisted_ip,
