@@ -1,5 +1,9 @@
 -module(bouncer_arbiter).
 
+%% TODOs
+%% * Enable connection pooling, to lower IO resource usage.
+%% * Respect external woody deadlines where applicable.
+
 %% NOTE
 %% This must be a path to some document with the subdocument of the following form:
 %% ```
