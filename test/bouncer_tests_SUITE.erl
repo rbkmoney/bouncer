@@ -126,7 +126,6 @@ start_bouncer(Env, C) ->
         {opa, #{
             endpoint  => ?OPA_ENDPOINT,
             transport => tcp
-            % event_handler => {ct_gun_event_h, []}
         }}
     ] ++ Env),
     Services = #{
