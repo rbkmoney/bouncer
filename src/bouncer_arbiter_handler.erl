@@ -37,10 +37,6 @@ do_handle_function('Judge', {RulesetID, ContextIn}, WoodyCtx, Opts) ->
             woody_error:raise(Class, Details);
         C:R:S ->
             ok = handle_judgement_beat({failed, {unexpected_exception, {C, R, S}}}, St),
-            % TODO
-            % Интересный вопрос: не нужно ли скрыть детали ошибки, чтобы они остались только
-            % в аудит-логе? Информация об ошибке не теряется, а шанс того, что детали ошибки
-            % утекут клиенту, минимизируется.
             erlang:raise(C, R, S)
     end.
 
