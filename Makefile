@@ -19,11 +19,9 @@ BASE_IMAGE_TAG := b5bbfa829d0e504e2755f529282a20876c86ec61
 BUILD_IMAGE_TAG := 917afcdd0c0a07bf4155d597bbba72e962e1a34a
 CALL_ANYWHERE := \
 	submodules \
-	all compile xref lint dialyze test cover \
-	start devrel release clean distclean \
-	generate regenerate swag_server.regenerate swag_client.regenerate
+	all compile xref lint dialyze cover release clean distclean
 
-CALL_W_CONTAINER := $(CALL_ANYWHERE)
+CALL_W_CONTAINER := $(CALL_ANYWHERE) test
 
 .PHONY: $(CALL_W_CONTAINER) all
 
