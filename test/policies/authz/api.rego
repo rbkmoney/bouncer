@@ -1,5 +1,7 @@
 package authz.api
 
+import data.authz.blacklists
+
 assertions := {
     "forbidden" : { why | forbidden[why] },
     "allowed"   : { why | allowed[why] }
@@ -32,12 +34,12 @@ forbidden[why] {
 
 forbidden[why] {
     ip := input.requester.ip
-    blacklist := data.blacklists["source-ip-range"]
+    blacklist := blacklists["source-ip-range"]
     matches := net.cidr_contains_matches(blacklist, ip)
     ranges := [ range | matches[_][0] = i; range := blacklist[i] ]
     why := [
         "ip_range_blacklisted",
-        sprintf("Requester IP address is blacklisted with ranges: %v", [ranges])
+        sprintf("Requester IP address is blacklisted with ranges: %v", [concat(", ", ranges)])
     ]
 }
 
