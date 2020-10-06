@@ -81,22 +81,15 @@ handle_network_error({timeout, Reason}, St) ->
 
 -spec encode_judgement(bouncer_arbiter:judgement()) ->
     thrift_judgement().
-encode_judgement({Resolution, Assertions}) ->
+encode_judgement({Resolution, _Assertions}) ->
     #bdcs_Judgement{
-        resolution = encode_resolution(Resolution),
-        assertions = [encode_assertion(A) || A <- Assertions]
+        resolution = encode_resolution(Resolution)
     }.
 
 encode_resolution(allowed) ->
     allowed;
 encode_resolution(forbidden) ->
     forbidden.
-
-encode_assertion({Code, Description}) ->
-    #bdcs_Assertion{
-        code = Code,
-        description = Description
-    }.
 
 -spec decode_context(thrift_context(), st()) ->
     {bouncer_context:ctx(), st()}.

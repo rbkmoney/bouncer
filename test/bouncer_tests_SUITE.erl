@@ -110,13 +110,14 @@ start_bouncer(Env, C) ->
     IP = "127.0.0.1",
     Port = 8022,
     ArbiterPath = <<"/v1/arbiter">>,
+    {ok, StashPid} = ct_stash:start(),
     Apps = genlib_app:start_application_with(bouncer, [
         {ip, IP},
         {port, Port},
         {services, #{
             arbiter => #{
                 path  => ArbiterPath,
-                pulse => {?MODULE, []}
+                pulse => {?MODULE, StashPid}
             }
         }},
         {transport_opts, #{
@@ -131,7 +132,7 @@ start_bouncer(Env, C) ->
     Services = #{
         arbiter => mk_url(IP, Port, ArbiterPath)
     },
-    [{group_apps, Apps}, {service_urls, Services} | C].
+    [{group_apps, Apps}, {service_urls, Services}, {stash, StashPid} | C].
 
 mk_url(IP, Port, Path) ->
     iolist_to_binary(["http://", IP, ":", genlib:to_binary(Port), Path]).
@@ -142,6 +143,7 @@ end_per_group(_Name, C) ->
     stop_bouncer(C).
 
 stop_bouncer(C) ->
+    with_config(stash, C, fun (Pid) -> ?assertEqual(ok, ct_stash:destroy(Pid)) end),
     with_config(group_apps, C, fun (Apps) -> genlib_app:stop_unload_applications(Apps) end).
 
 -spec init_per_testcase(atom(), config()) ->
@@ -159,11 +161,7 @@ end_per_testcase(_Name, _C) ->
 %%
 
 -define(CONTEXT(Fragments), #bdcs_Context{fragments = Fragments}).
--define(ASSERTION(Code), #bdcs_Assertion{code = Code}).
 -define(JUDGEMENT(Resolution), #bdcs_Judgement{resolution = Resolution}).
--define(JUDGEMENT(Resolution, Assertions),
-    #bdcs_Judgement{resolution = Resolution, assertions = Assertions}
-).
 
 -spec missing_ruleset_notfound(config()) -> ok.
 -spec incorrect_ruleset_invalid(config()) -> ok.
@@ -173,44 +171,93 @@ end_per_testcase(_Name, _C) ->
 -spec distinct_sets_context_valid(config()) -> ok.
 
 missing_ruleset_notfound(C) ->
+    Client = mk_client(C),
     MissingRulesetID = "missing_ruleset",
     ?assertThrow(
         #bdcs_RulesetNotFound{},
-        call_judge(MissingRulesetID, ?CONTEXT(#{}), mk_client(C))
+        call_judge(MissingRulesetID, ?CONTEXT(#{}), Client)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {failed, ruleset_notfound}}
+        ],
+        flush_beats(Client, C)
     ).
 
 incorrect_ruleset_invalid(C) ->
+    Client1 = mk_client(C),
     ?assertThrow(
         #bdcs_InvalidRuleset{},
-        call_judge("trivial/incorrect1", ?CONTEXT(#{}), mk_client(C))
+        call_judge("trivial/incorrect1", ?CONTEXT(#{}), Client1)
     ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {failed, {ruleset_invalid, [
+                {data_invalid, _Schema, no_extra_properties_allowed, _Data, [<<"fordibben">>]}
+            ]}}}
+        ],
+        flush_beats(Client1, C)
+    ),
+    Client2 = mk_client(C),
     ?assertThrow(
         #bdcs_InvalidRuleset{},
-        call_judge("trivial/incorrect2", ?CONTEXT(#{}), mk_client(C))
+        call_judge("trivial/incorrect2", ?CONTEXT(#{}), Client2)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {failed, {ruleset_invalid, [
+                {data_invalid, _Schema, wrong_type, _Data, [<<"allowed">>]}
+            ]}}}
+        ],
+        flush_beats(Client2, C)
     ).
 
 missing_content_invalid_context(C) ->
+    Client = mk_client(C),
     NoContentFragment = #bctx_ContextFragment{type = v1_thrift_binary},
     Context = ?CONTEXT(#{<<"missing">> => NoContentFragment}),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, Context, mk_client(C))
+        call_judge(?API_RULESET_ID, Context, Client)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {failed, {malformed_context, #{
+                <<"missing">> := {v1_thrift_binary, {unexpected, _, _, _}}
+            }}}}
+        ],
+        flush_beats(Client, C)
     ).
 
 junk_content_invalid_context(C) ->
+    Client = mk_client(C),
     Junk = <<"STOP RIGHT THERE YOU CRIMINAL SCUM!">>,
     JunkFragment = #bctx_ContextFragment{type = v1_thrift_binary, content = Junk},
     Context = ?CONTEXT(#{<<"missing">> => JunkFragment}),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, Context, mk_client(C))
+        call_judge(?API_RULESET_ID, Context, Client)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {failed, {malformed_context, #{
+                <<"missing">> := {v1_thrift_binary, {unexpected, _, _, _}}
+            }}}}
+        ],
+        flush_beats(Client, C)
     ).
 
 conflicting_context_invalid(C) ->
+    Client = mk_client(C),
     Fragment1 = #{
         user => #{
             id    => <<"joeblow">>,
-            email => <<"deadinside69@example.org">>
+            email => Email1 = <<"deadinside69@example.org">>
         },
         requester => #{
             ip => <<"1.2.3.4">>
@@ -231,10 +278,20 @@ conflicting_context_invalid(C) ->
     }),
     ?assertThrow(
         #bdcs_InvalidContext{},
-        call_judge(?API_RULESET_ID, Context, mk_client(C))
+        call_judge(?API_RULESET_ID, Context, Client)
+    ),
+    ?assertEqual(
+        [
+            {judgement, started},
+            {judgement, {failed, {conflicting_context, #{
+                <<"frag2">> => #{user => #{email => Email1}}
+            }}}}
+        ],
+        flush_beats(Client, C)
     ).
 
 distinct_sets_context_valid(C) ->
+    Client = mk_client(C),
     Fragment1 = #{
         user => #{
             id   => <<"joeblow">>,
@@ -271,7 +328,14 @@ distinct_sets_context_valid(C) ->
     }),
     ?assertMatch(
         #bdcs_Judgement{},
-        call_judge(?API_RULESET_ID, Context, mk_client(C))
+        call_judge(?API_RULESET_ID, Context, Client)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {completed, _}}
+        ],
+        flush_beats(Client, C)
     ).
 
 %%
@@ -282,6 +346,7 @@ distinct_sets_context_valid(C) ->
 -spec forbidden_w_empty_context(config()) -> ok.
 
 allowed_create_invoice_shop_manager(C) ->
+    Client = mk_client(C),
     Fragment = lists:foldl(fun maps:merge/2, #{}, [
         mk_auth_session_token(),
         mk_env(),
@@ -294,11 +359,19 @@ allowed_create_invoice_shop_manager(C) ->
     ]),
     Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
-        ?JUDGEMENT(allowed, [?ASSERTION(<<"user_has_role">>)]),
-        call_judge(?API_RULESET_ID, Context, mk_client(C))
+        ?JUDGEMENT(allowed),
+        call_judge(?API_RULESET_ID, Context, Client)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {completed, {allowed, [{<<"user_has_role">>, _}]}}}
+        ],
+        flush_beats(Client, C)
     ).
 
 forbidden_expired(C) ->
+    Client = mk_client(C),
     % Would be funny if this fails on some system too deep in the past.
     Fragment = maps:merge(mk_env(), #{
         auth => #{
@@ -308,11 +381,19 @@ forbidden_expired(C) ->
     }),
     Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
-        ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_expired">>)]),
-        call_judge(?API_RULESET_ID, Context, mk_client(C))
+        ?JUDGEMENT(forbidden),
+        call_judge(?API_RULESET_ID, Context, Client)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {completed, {forbidden, [{<<"auth_expired">>, _}]}}}
+        ],
+        flush_beats(Client, C)
     ).
 
 forbidden_blacklisted_ip(C) ->
+    Client = mk_client(C),
     Fragment = lists:foldl(fun maps:merge/2, #{}, [
         mk_auth_session_token(),
         mk_env(),
@@ -321,19 +402,42 @@ forbidden_blacklisted_ip(C) ->
     ]),
     Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
-        ?JUDGEMENT(forbidden, [?ASSERTION(<<"ip_range_blacklisted">>)]),
-        call_judge(?API_RULESET_ID, Context, mk_client(C))
+        ?JUDGEMENT(forbidden),
+        call_judge(?API_RULESET_ID, Context, Client)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {completed, {forbidden, [{<<"ip_range_blacklisted">>, _}]}}}
+        ],
+        flush_beats(Client, C)
     ).
 
 forbidden_w_empty_context(C) ->
+    Client1 = mk_client(C),
     EmptyFragment = mk_ctx_v1_fragment(#{}),
     ?assertMatch(
-        ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_required">>)]),
-        call_judge(?API_RULESET_ID, ?CONTEXT(#{}), mk_client(C))
+        ?JUDGEMENT(forbidden),
+        call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client1)
     ),
     ?assertMatch(
-        ?JUDGEMENT(forbidden, [?ASSERTION(<<"auth_required">>)]),
-        call_judge(?API_RULESET_ID, ?CONTEXT(#{<<"empty">> => EmptyFragment}), mk_client(C))
+        [
+            {judgement, started},
+            {judgement, {completed, {forbidden, [{<<"auth_required">>, _}]}}}
+        ],
+        flush_beats(Client1, C)
+    ),
+    Client2 = mk_client(C),
+    ?assertMatch(
+        ?JUDGEMENT(forbidden),
+        call_judge(?API_RULESET_ID, ?CONTEXT(#{<<"empty">> => EmptyFragment}), Client2)
+    ),
+    ?assertMatch(
+        [
+            {judgement, started},
+            {judgement, {completed, {forbidden, [{<<"auth_required">>, _}]}}}
+        ],
+        flush_beats(Client2, C)
     ).
 
 mk_user(UserID, UserOrgs) ->
@@ -401,6 +505,13 @@ connect_failed_means_unavailable(C) ->
         ?assertError(
             {woody_error, {external, resource_unavailable, _}},
             call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client)
+        ),
+        ?assertMatch(
+            [
+                {judgement, started},
+                {judgement, {failed, {unavailable, {down, {shutdown, econnrefused}}}}}
+            ],
+            flush_beats(Client, C1)
         )
     after
         stop_bouncer(C1)
@@ -418,6 +529,13 @@ connect_timeout_means_unavailable(C) ->
             % `resource_unavailable`.
             {woody_error, {external, result_unknown, _}},
             call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client)
+        ),
+        ?assertMatch(
+            [
+                {judgement, started},
+                {judgement, {failed, {timeout, timeout}}}
+            ],
+            flush_beats(Client, C1)
         )
     after
         stop_bouncer(C1)
@@ -427,11 +545,18 @@ request_timeout_means_unknown(C) ->
     {ok, Proxy} = ct_proxy:start_link(?OPA_ENDPOINT),
     C1 = start_proxy_bouncer(Proxy, C),
     Client = mk_client(C1),
-    ok = change_proxy_mode(Proxy, connection, ignore, C),
+    ok = change_proxy_mode(Proxy, connection, ignore, C1),
     try
         ?assertError(
             {woody_error, {external, result_unknown, _}},
             call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client)
+        ),
+        ?assertMatch(
+            [
+                {judgement, started},
+                {judgement, {failed, {timeout, timeout}}}
+            ],
+            flush_beats(Client, C1)
         )
     after
         stop_bouncer(C1)
@@ -487,10 +612,25 @@ get_service_spec(arbiter) ->
 
 %%
 
--spec handle_beat(bouncer_arbiter_pulse:beat(), bouncer_arbiter_pulse:metadata(), []) ->
+-spec handle_beat(bouncer_arbiter_pulse:beat(), bouncer_arbiter_pulse:metadata(), pid()) ->
     ok.
-handle_beat(Beat, Metadata, []) ->
+handle_beat(Beat, Metadata, StashPid) ->
+    _ = stash_beat(Beat, Metadata, StashPid),
     ct:pal("~p [arbiter] ~0p:~nmetadata=~p", [self(), Beat, Metadata]).
+
+%%
+
+stash_beat(Beat, Metadata = #{woody_ctx := WoodyCtx}, StashPid) ->
+    ct_stash:append(StashPid, get_trace_id(WoodyCtx), {Beat, Metadata}).
+
+flush_beats({WoodyCtx, _}, C) ->
+    StashPid = ?CONFIG(stash, C),
+    {ok, Entries} = ct_stash:flush(StashPid, get_trace_id(WoodyCtx)),
+    [Beat || {Beat, _Metadata} <- Entries].
+
+get_trace_id(WoodyCtx) ->
+    RpcID = woody_context:get_rpc_id(WoodyCtx),
+    maps:get(trace_id, RpcID).
 
 %%
 

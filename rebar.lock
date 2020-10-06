@@ -2,7 +2,7 @@
 [{<<"bear">>,{pkg,<<"bear">>,<<"0.8.7">>},3},
  {<<"bouncer_proto">>,
   {git,"git@github.com:rbkmoney/bouncer-proto.git",
-       {ref,"3b6e4cc8803c0ce8d6aaff97e5644736e10300ec"}},
+       {ref,"97dcad6f2f2706f269188722bc2419246d38823b"}},
   0},
  {<<"cache">>,{pkg,<<"cache">>,<<"2.2.0">>},1},
  {<<"certifi">>,{pkg,<<"certifi">>,<<"2.5.1">>},2},
