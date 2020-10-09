@@ -178,11 +178,8 @@ missing_ruleset_notfound(C) ->
         call_judge(MissingRulesetID, ?CONTEXT(#{}), Client)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {failed, ruleset_notfound}}
-        ],
-        flush_beats(Client, C)
+        {judgement, {failed, ruleset_notfound}},
+        lists:last(flush_beats(Client, C))
     ).
 
 incorrect_ruleset_invalid(C) ->
@@ -192,13 +189,10 @@ incorrect_ruleset_invalid(C) ->
         call_judge("trivial/incorrect1", ?CONTEXT(#{}), Client1)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {failed, {ruleset_invalid, [
-                {data_invalid, _Schema, no_extra_properties_allowed, _Data, [<<"fordibben">>]}
-            ]}}}
-        ],
-        flush_beats(Client1, C)
+        {judgement, {failed, {ruleset_invalid, [
+            {data_invalid, _, no_extra_properties_allowed, _, [<<"fordibben">>]}
+        ]}}},
+        lists:last(flush_beats(Client1, C))
     ),
     Client2 = mk_client(C),
     ?assertThrow(
@@ -206,13 +200,10 @@ incorrect_ruleset_invalid(C) ->
         call_judge("trivial/incorrect2", ?CONTEXT(#{}), Client2)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {failed, {ruleset_invalid, [
-                {data_invalid, _Schema, wrong_type, _Data, [<<"allowed">>]}
-            ]}}}
-        ],
-        flush_beats(Client2, C)
+        {judgement, {failed, {ruleset_invalid, [
+            {data_invalid, _, wrong_type, _, [<<"allowed">>]}
+        ]}}},
+        lists:last(flush_beats(Client2, C))
     ).
 
 missing_content_invalid_context(C) ->
@@ -224,13 +215,10 @@ missing_content_invalid_context(C) ->
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {failed, {malformed_context, #{
-                <<"missing">> := {v1_thrift_binary, {unexpected, _, _, _}}
-            }}}}
-        ],
-        flush_beats(Client, C)
+        {judgement, {failed, {malformed_context, #{
+            <<"missing">> := {v1_thrift_binary, {unexpected, _, _, _}}
+        }}}},
+        lists:last(flush_beats(Client, C))
     ).
 
 junk_content_invalid_context(C) ->
@@ -243,13 +231,10 @@ junk_content_invalid_context(C) ->
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {failed, {malformed_context, #{
-                <<"missing">> := {v1_thrift_binary, {unexpected, _, _, _}}
-            }}}}
-        ],
-        flush_beats(Client, C)
+        {judgement, {failed, {malformed_context, #{
+            <<"missing">> := {v1_thrift_binary, {unexpected, _, _, _}}
+        }}}},
+        lists:last(flush_beats(Client, C))
     ).
 
 conflicting_context_invalid(C) ->
@@ -281,13 +266,10 @@ conflicting_context_invalid(C) ->
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertEqual(
-        [
-            {judgement, started},
-            {judgement, {failed, {conflicting_context, #{
-                <<"frag2">> => #{user => #{email => Email1}}
-            }}}}
-        ],
-        flush_beats(Client, C)
+        {judgement, {failed, {conflicting_context, #{
+            <<"frag2">> => #{user => #{email => Email1}}
+        }}}},
+        lists:last(flush_beats(Client, C))
     ).
 
 distinct_sets_context_valid(C) ->
@@ -331,11 +313,8 @@ distinct_sets_context_valid(C) ->
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {completed, _}}
-        ],
-        flush_beats(Client, C)
+        {judgement, {completed, _}},
+        lists:last(flush_beats(Client, C))
     ).
 
 %%
@@ -363,11 +342,8 @@ allowed_create_invoice_shop_manager(C) ->
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {completed, {allowed, [{<<"user_has_role">>, _}]}}}
-        ],
-        flush_beats(Client, C)
+        {judgement, {completed, {allowed, [{<<"user_has_role">>, _}]}}},
+        lists:last(flush_beats(Client, C))
     ).
 
 forbidden_expired(C) ->
@@ -385,11 +361,8 @@ forbidden_expired(C) ->
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {completed, {forbidden, [{<<"auth_expired">>, _}]}}}
-        ],
-        flush_beats(Client, C)
+        {judgement, {completed, {forbidden, [{<<"auth_expired">>, _}]}}},
+        lists:last(flush_beats(Client, C))
     ).
 
 forbidden_blacklisted_ip(C) ->
@@ -406,11 +379,8 @@ forbidden_blacklisted_ip(C) ->
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {completed, {forbidden, [{<<"ip_range_blacklisted">>, _}]}}}
-        ],
-        flush_beats(Client, C)
+        {judgement, {completed, {forbidden, [{<<"ip_range_blacklisted">>, _}]}}},
+        lists:last(flush_beats(Client, C))
     ).
 
 forbidden_w_empty_context(C) ->
@@ -421,11 +391,8 @@ forbidden_w_empty_context(C) ->
         call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client1)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {completed, {forbidden, [{<<"auth_required">>, _}]}}}
-        ],
-        flush_beats(Client1, C)
+        {judgement, {completed, {forbidden, [{<<"auth_required">>, _}]}}},
+        lists:last(flush_beats(Client1, C))
     ),
     Client2 = mk_client(C),
     ?assertMatch(
@@ -433,11 +400,8 @@ forbidden_w_empty_context(C) ->
         call_judge(?API_RULESET_ID, ?CONTEXT(#{<<"empty">> => EmptyFragment}), Client2)
     ),
     ?assertMatch(
-        [
-            {judgement, started},
-            {judgement, {completed, {forbidden, [{<<"auth_required">>, _}]}}}
-        ],
-        flush_beats(Client2, C)
+        {judgement, {completed, {forbidden, [{<<"auth_required">>, _}]}}},
+        lists:last(flush_beats(Client2, C))
     ).
 
 mk_user(UserID, UserOrgs) ->
