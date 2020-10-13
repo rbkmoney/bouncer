@@ -62,11 +62,11 @@ handle_judge(RulesetID, ContextIn, St0) ->
 
 -spec handle_network_error(_Reason, st()) ->
     no_return().
-handle_network_error({unavailable, Reason}, St) ->
-    ok = handle_judgement_beat({failed, {unavailable, Reason}}, St),
+handle_network_error({unavailable, Reason} = Error, St) ->
+    ok = handle_judgement_beat({failed, Error}, St),
     throw({woody, system, {external, resource_unavailable, genlib:format(Reason)}});
-handle_network_error({timeout, Reason}, St) ->
-    ok = handle_judgement_beat({failed, {timeout, Reason}}, St),
+handle_network_error({unknown, Reason} = Error, St) ->
+    ok = handle_judgement_beat({failed, Error}, St),
     throw({woody, system, {external, result_unknown, genlib:format(Reason)}}).
 
 %%

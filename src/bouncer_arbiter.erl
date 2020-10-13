@@ -30,7 +30,7 @@
     {error,
         ruleset_notfound |
         {ruleset_invalid, _Details} |
-        {unavailable | timeout, _Reason}
+        {unavailable | unknown, _Reason}
     }.
 judge(RulesetID, Context) ->
     case mk_opa_client() of
@@ -174,7 +174,7 @@ mk_opa_client() ->
     {ok, document()} |
     {error,
         notfound |
-        {timeout, _Reason}
+        {unknown, _Reason}
     }.
 request_opa_document(ID, Input, {Client, Opts}) ->
     Path = join_path(<<"/v1/data">>, ID),
@@ -199,12 +199,12 @@ request_opa_document(ID, Input, {Client, Opts}) ->
                 {ok, Response} ->
                     decode_document(Response);
                 {error, Reason} ->
-                    {error, {timeout, Reason}}
+                    {error, {unknown, Reason}}
             end;
         {response, fin, 404, _Headers} ->
             {error, notfound};
         {error, Reason} ->
-            {error, {timeout, Reason}}
+            {error, {unknown, Reason}}
     end.
 
 -spec decode_document(binary()) ->

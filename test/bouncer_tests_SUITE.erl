@@ -497,7 +497,7 @@ connect_timeout_means_unavailable(C) ->
         ?assertMatch(
             [
                 {judgement, started},
-                {judgement, {failed, {timeout, timeout}}}
+                {judgement, {failed, {unknown, timeout}}}
             ],
             flush_beats(Client, C1)
         )
@@ -518,7 +518,7 @@ request_timeout_means_unknown(C) ->
         ?assertMatch(
             [
                 {judgement, started},
-                {judgement, {failed, {timeout, timeout}}}
+                {judgement, {failed, {unknown, timeout}}}
             ],
             flush_beats(Client, C1)
         )
