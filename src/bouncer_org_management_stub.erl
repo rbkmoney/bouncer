@@ -15,7 +15,6 @@
     {ok, woody:result()}.
 handle_function('GetUserContext', {UserID}, _WoodyCtx, _Opts) ->
     ContextFragmentV1 = #bctx_v1_ContextFragment{
-        vsn = 1,
         user = #bctx_v1_User{
             id = UserID,
             orgs = [#bctx_v1_Organization{
