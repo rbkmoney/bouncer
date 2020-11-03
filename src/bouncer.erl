@@ -54,7 +54,8 @@ init([]) ->
             transport_opts    => get_transport_opts(),
             shutdown_timeout  => get_shutdown_timeout(),
             event_handler     => EventHandlers,
-            handlers          => get_handler_specs(ServiceOpts, AuditPulse) ++ get_stub_handler_specs(ServiceOpts),
+            handlers          =>
+                get_handler_specs(ServiceOpts, AuditPulse) ++ get_stub_handler_specs(ServiceOpts),
             additional_routes => [erl_health_handle:get_route(Healthcheck)]
         }
     ),
@@ -114,7 +115,8 @@ get_stub_handler_specs(ServiceOpts) ->
     [
         {
             maps:get(path, OrgManagementStub, <<"/v1/org_management_stub">>),
-            {{orgmgmt_auth_context_provider_thrift, 'AuthContextProvider'}, bouncer_org_management_stub}
+            {{orgmgmt_auth_context_provider_thrift, 'AuthContextProvider'},
+                bouncer_org_management_stub}
         }
     ].
 
