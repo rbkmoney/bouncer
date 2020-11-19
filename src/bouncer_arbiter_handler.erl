@@ -79,9 +79,10 @@ handle_network_error({unknown, Reason} = Error, St) ->
 
 -spec encode_judgement(bouncer_arbiter:judgement()) ->
     thrift_judgement().
-encode_judgement({Resolution, _Assertions}) ->
+encode_judgement({Resolution, _Assertions, Context}) ->
     #bdcs_Judgement{
-        resolution = encode_resolution(Resolution)
+        resolution = encode_resolution(Resolution),
+        context = encode_context(Context)
     }.
 
 encode_resolution(allowed) ->
@@ -166,6 +167,24 @@ decode_fragments(Fragments, St0) ->
     {ok, bouncer_context:ctx(), fragment_metadata()} | {error, _Reason}.
 decode_fragment(v1_thrift_binary, Content) ->
     bouncer_context_v1:decode(thrift, Content).
+
+-spec encode_context(bouncer_context:ctx()) -> thrift_context().
+encode_context(Context) ->
+    Type = v1_thrift_binary,
+    {ok, Fragment} = encode_fragment(Type, Context),
+    #bdcs_Context{
+        fragments = #{
+            <<"1">> => #bctx_ContextFragment{
+                type = Type
+                content = Fragment
+            }
+        }
+    }.
+
+-spec decode_fragment(thrift_fragment_type(), bouncer_context:ctx()) ->
+    {ok, _EncodedContent :: binary()} | {error, _Reason}.
+encode_fragment(v1_thrift_binary, Content) ->
+    bouncer_context_v1:encode(thrift, Content).
 
 %%
 

@@ -213,12 +213,13 @@ get_beat_metadata({judgement, Event}) ->
                 #{
                     event => started
                 };
-            {completed, {Resolution, Assertions}} ->
-                #{
+            {completed, {Resolution, Assertions, Context}} ->
+                genlib_map:compact(#{
                     event => completed,
                     resolution => encode_resolution(Resolution),
-                    assertions => lists:map(fun encode_assertion/1, Assertions)
-                };
+                    assertions => lists:map(fun encode_assertion/1, Assertions),
+                    context => Context
+                });
             {failed, Error} ->
                 #{
                     event => failed,

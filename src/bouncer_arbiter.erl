@@ -55,17 +55,18 @@ infer_judgement(Document) ->
         {ok, _} ->
             Allowed = maps:get(<<"allowed">>, Document, []),
             Forbidden = maps:get(<<"forbidden">>, Document, []),
-            {ok, infer_judgement(Forbidden, Allowed)};
+            Context = maps:get(<<"context">>, Document, undefined),
+            {ok, {infer_judgement(Forbidden, Allowed, Context), Context}};
         {error, Reason} ->
             {error, {ruleset_invalid, Reason}}
     end.
 
-infer_judgement(Forbidden = [_ | _], _Allowed) ->
-    {forbidden, extract_assertions(Forbidden)};
-infer_judgement(_Forbidden = [], Allowed = [_ | _]) ->
-    {allowed, extract_assertions(Allowed)};
-infer_judgement(_Forbidden = [], _Allowed = []) ->
-    {forbidden, []}.
+infer_judgement(Forbidden = [_ | _], _Allowed, _Context) ->
+    {forbidden, extract_assertions(Forbidden), undefined};
+infer_judgement(_Forbidden = [], Allowed = [_ | _], Context) ->
+    {allowed, extract_assertions(Allowed), Context};
+infer_judgement(_Forbidden = [], _Allowed = [], _Context) ->
+    {forbidden, [], undefined}.
 
 extract_assertions(Assertions) ->
     [extract_assertion(E) || E <- Assertions].
@@ -91,12 +92,52 @@ get_judgement_schema() ->
             ]}
         ]}
     ],
+    ID = [
+        {<<"type">>, <<"string">>},
+        {<<"minLength">>, 1}
+    ],
+    ContextSchema = [
+        {<<"type">>, <<"object">>},
+        {<<"properties">>, [
+            {<<"anapi">>, [
+                {<<"type">>, <<"object">>},
+                {<<"required">>, [<<"op">>]},
+                {<<"properties">>, [
+                    {<<"op">>, [
+                        {<<"type">>, <<"object">>},
+                        {<<"required">>, [<<"id">>]},
+                        {<<"properties">>, [
+                            {<<"id">>, ID},
+                            {<<"party">>, [
+                                {<<"type">>, <<"object">>},
+                                {<<"required">>, [<<"id">>]},
+                                {<<"properties">>, [
+                                    {<<"id">>, ID}
+                                ]}
+                            ]},
+                            {<<"shops">>, [
+                                {<<"type">>, <<"array">>},
+                                {<<"items">>, [
+                                    {<<"type">>, <<"object">>},
+                                    {<<"required">>, [<<"id">>]},
+                                    {<<"properties">>, [
+                                        {<<"id">>, ID}
+                                    ]}
+                                ]}
+                            ]}
+                        ]}
+                    ]}
+                ]}
+            ]}
+        ]}
+    ],
     [
         {<<"$schema">>, <<"http://json-schema.org/draft-04/schema#">>},
         {<<"type">>, <<"object">>},
         {<<"properties">>, [
             {<<"allowed">>, AssertionsSchema},
-            {<<"forbidden">>, AssertionsSchema}
+            {<<"forbidden">>, AssertionsSchema},
+            {<<"context">>, ContextSchema}
         ]},
         {<<"additionalProperties">>, false}
     ].
