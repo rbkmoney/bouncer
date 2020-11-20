@@ -175,7 +175,7 @@ encode_context(Context) ->
     #bdcs_Context{
         fragments = #{
             <<"1">> => #bctx_ContextFragment{
-                type = Type
+                type = Type,
                 content = Fragment
             }
         }
