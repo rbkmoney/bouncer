@@ -381,7 +381,7 @@ forbidden_expired(C) ->
     }),
     Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
-        ?JUDGEMENT({forbidden, #bdcs_ResulutionForbidden{}}, forbidden),
+        ?JUDGEMENT({forbidden, #bdcs_ResolutionForbidden{}}, forbidden),
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertMatch(
@@ -399,7 +399,7 @@ forbidden_blacklisted_ip(C) ->
     ]),
     Context = ?CONTEXT(#{<<"root">> => mk_ctx_v1_fragment(Fragment)}),
     ?assertMatch(
-        ?JUDGEMENT({forbidden, #bdcs_ResulutionForbidden{}}, forbidden),
+        ?JUDGEMENT({forbidden, #bdcs_ResolutionForbidden{}}, forbidden),
         call_judge(?API_RULESET_ID, Context, Client)
     ),
     ?assertMatch(
@@ -411,7 +411,7 @@ forbidden_w_empty_context(C) ->
     Client1 = mk_client(C),
     EmptyFragment = mk_ctx_v1_fragment(#{}),
     ?assertMatch(
-        ?JUDGEMENT({forbidden, #bdcs_ResulutionForbidden{}}, forbidden),
+        ?JUDGEMENT({forbidden, #bdcs_ResolutionForbidden{}}, forbidden),
         call_judge(?API_RULESET_ID, ?CONTEXT(#{}), Client1)
     ),
     ?assertMatch(
@@ -420,7 +420,7 @@ forbidden_w_empty_context(C) ->
     ),
     Client2 = mk_client(C),
     ?assertMatch(
-        ?JUDGEMENT({forbidden, #bdcs_ResulutionForbidden{}}, forbidden),
+        ?JUDGEMENT({forbidden, #bdcs_ResolutionForbidden{}}, forbidden),
         call_judge(?API_RULESET_ID, ?CONTEXT(#{<<"empty">> => EmptyFragment}), Client2)
     ),
     ?assertMatch(

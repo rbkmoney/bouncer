@@ -93,7 +93,7 @@ encode_resolution_legacy(forbidden) ->
 encode_resolution(allowed) ->
     {allowed, #bdcs_ResolutionAllowed{}};
 encode_resolution(forbidden) ->
-    {forbidden, #bdcs_ResulutionForbidden{}}.
+    {forbidden, #bdcs_ResolutionForbidden{}}.
 
 -spec decode_context(thrift_context(), st()) ->
     {bouncer_context:ctx(), st()}.
