@@ -167,7 +167,8 @@ end_per_testcase(_Name, _C) ->
 %%
 
 -define(CONTEXT(Fragments), #bdcs_Context{fragments = Fragments}).
--define(JUDGEMENT(Resolution, ResolutionLegacy), #bdcs_Judgement{resolution = Resolution, resolution_legacy = ResolutionLegacy}).
+-define(JUDGEMENT(Resolution, ResolutionLegacy),
+    #bdcs_Judgement{resolution = Resolution, resolution_legacy = ResolutionLegacy}).
 
 -spec missing_ruleset_notfound(config()) -> ok.
 -spec incorrect_ruleset_invalid1(config()) -> ok.
