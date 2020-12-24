@@ -1,17 +1,28 @@
-package authz.api
+package service.authz.api
 
-import data.authz.blacklists
+import data.service.authz.api.invoice_access_token
+import data.service.authz.api.url_shortener
+import data.service.authz.api.binapi
+import data.service.authz.api.anapi
+import data.service.authz.blacklists
+import data.service.authz.whitelists
+import data.service.authz.roles
+import data.service.authz.org
+import data.service.authz.decision
 
 assertions := {
     "forbidden" : { why | forbidden[why] },
-    "allowed"   : { why | allowed[why] }
+    "allowed"   : { why | allowed[why] },
+    "restrictions": { what.type: what.restrictions[what.type] | restrictions[what] }
 }
+
+decision := decision.decide(assertions)
 
 # Set of assertions which tell why operation under the input context is forbidden.
 # When the set is empty operation is not explicitly forbidden.
 # Each element must be an object of the following form:
 # ```
-# {"code": "...", ...}
+# {"code": "auth_expired", "description": "..."}
 # ```
 forbidden[why] {
     input
@@ -34,85 +45,67 @@ forbidden[why] {
 
 forbidden[why] {
     ip := input.requester.ip
-    blacklist := blacklists["source-ip-range"]
+    blacklist := blacklists.source_ip_range
     matches := net.cidr_contains_matches(blacklist, ip)
+    matches[_]
     ranges := [ range | matches[_][0] = i; range := blacklist[i] ]
     why := {
         "code": "ip_range_blacklisted",
-        "description": sprintf("Requester IP address is blacklisted with ranges: %v", [concat(", ", ranges)])
+        "description": sprintf(
+            "Requester IP address is blacklisted with ranges: %v",
+            [concat(", ", ranges)]
+        )
     }
+}
+
+forbidden[why] {
+    input.anapi
+    anapi.forbidden[why]
+}
+
+warnings[why] {
+    not blacklists.source_ip_range
+    why := "Blacklist 'source_ip_range' is not defined, blacklisting by IP will NOT WORK."
+}
+
+warnings[why] {
+    not whitelists.bin_lookup_allowed_party_ids
+    why := "Whitelist 'bin_lookup_allowed_party_ids' is not defined, whitelisting by partyID will NOT WORK."
 }
 
 # Set of assertions which tell why operation under the input context is allowed.
 # When the set is empty operation is not explicitly allowed.
 # Each element must be an object of the following form:
 # ```
-# {"code": "...", ...}
+# {"code": "auth_expired", "description": "..."}
 # ```
 allowed[why] {
-    input.auth.method == "SessionToken"
-    input.user
-    org_allowed[why]
+    input.shortener
+    url_shortener.allowed[why]
 }
 
-org_allowed[why] {
-    org := org_by_operation
-    org.owner == input.user.id
-    why := {
-        "code": "user_is_owner"
+allowed[why] {
+    input.binapi
+    binapi.allowed[why]
+}
+
+allowed[why] {
+    input.auth.method == "InvoiceAccessToken"
+    invoice_access_token.allowed[why]
+}
+
+allowed[why] {
+    input.anapi
+    anapi.allowed[why]
+}
+
+# Restrictions
+
+restrictions[what] {
+    input.anapi
+    rstns := anapi.restrictions[_]
+    what := {
+        "type": "anapi",
+        "restrictions": rstns
     }
 }
-
-org_allowed[why] {
-    rolename := role_by_operation[_]
-    org_by_operation.roles[i].id == rolename
-    scopename := scopename_by_role[i]
-    why := {
-        "code": "user_has_role",
-        "description": sprintf("User has role %s in scope %v", [rolename, scopename])
-    }
-}
-
-scopename_by_role[i] = sprintf("shop:%s", [shop]) {
-    role := org_by_operation.roles[i]
-    shop := role.scope.shop.id
-    shop == input.capi.op.shop.id
-}
-
-scopename_by_role[i] = "*" {
-    role := org_by_operation.roles[i]
-    not role.scope
-}
-
-# Set of roles at least one of which is required to perform the operation in context.
-role_by_operation["Manager"]
-    { input.capi.op.id == "CreateInvoice" }
-    { input.capi.op.id == "GetInvoiceByID" }
-    { input.capi.op.id == "GetInvoiceEvents" }
-    { input.capi.op.id == "FulfillInvoice" }
-    { input.capi.op.id == "RescindInvoice" }
-    { input.capi.op.id == "GetPayments" }
-    { input.capi.op.id == "GetPaymentByID" }
-    { input.capi.op.id == "CancelPayment" }
-    { input.capi.op.id == "CapturePayment" }
-    { input.capi.op.id == "GetRefunds" }
-    { input.capi.op.id == "GetRefundByID" }
-    { input.capi.op.id == "CreateRefund" }
-    { input.capi.op.id == "CreateInvoiceTemplate" }
-    { input.capi.op.id == "GetInvoiceTemplateByID" }
-    { input.capi.op.id == "UpdateInvoiceTemplate" }
-    { input.capi.op.id == "DeleteInvoiceTemplate" }
-
-role_by_operation["Administrator"]
-    { input.orgmgmt.op.id == "ListInvitations" }
-    { input.orgmgmt.op.id == "CreateInvitation" }
-    { input.orgmgmt.op.id == "GetInvitation" }
-    { input.orgmgmt.op.id == "RevokeInvitation" }
-
-# Context of an organisation which is being operated upon.
-org_by_operation = org_by_id[id]
-    { id = input.capi.op.party.id }
-    { id = input.orgmgmt.op.organization.id }
-
-# A mapping of org ids to organizations.
-org_by_id := { org.id: org | org := input.user.orgs[_] }

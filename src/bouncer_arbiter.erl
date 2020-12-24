@@ -35,7 +35,7 @@
 judge(RulesetID, Context) ->
     case mk_opa_client() of
         {ok, Client} ->
-            Location = join_path(RulesetID, <<"/assertions">>),
+            Location = join_path(RulesetID, <<"/decision">>),
             case request_opa_document(Location, Context, Client) of
                 {ok, Document} ->
                     infer_judgement(Document);
@@ -53,19 +53,17 @@ judge(RulesetID, Context) ->
 infer_judgement(Document) ->
     case jesse:validate_with_schema(get_judgement_schema(), Document) of
         {ok, _} ->
-            Allowed = maps:get(<<"allowed">>, Document, []),
-            Forbidden = maps:get(<<"forbidden">>, Document, []),
-            {ok, infer_judgement(Forbidden, Allowed)};
+            {ok, parse_judgement(Document)};
         {error, Reason} ->
             {error, {ruleset_invalid, Reason}}
     end.
 
-infer_judgement(Forbidden = [_ | _], _Allowed) ->
-    {forbidden, extract_assertions(Forbidden)};
-infer_judgement(_Forbidden = [], Allowed = [_ | _]) ->
-    {allowed, extract_assertions(Allowed)};
-infer_judgement(_Forbidden = [], _Allowed = []) ->
-    {forbidden, []}.
+parse_judgement(#{<<"resolution">> := [<<"forbidden">>, Assertions]}) ->
+    {forbidden, extract_assertions(Assertions)};
+parse_judgement(#{<<"resolution">> := [<<"allowed">>, Assertions]}) ->
+    {allowed, extract_assertions(Assertions)};
+parse_judgement(#{<<"resolution">> := [<<"restricted">>, Assertions], <<"restrictions">> := Restrictions}) ->
+    {{restricted, Restrictions}, extract_assertion(Assertions)}.
 
 extract_assertions(Assertions) ->
     [extract_assertion(E) || E <- Assertions].
@@ -91,14 +89,54 @@ get_judgement_schema() ->
             ]}
         ]}
     ],
+    ResolutionSchema = [
+        {<<"type">>, <<"array">>},
+        {<<"items">>, [
+            [
+                {<<"type">>, <<"string">>},
+                {<<"pattern">>, <<"(allowed)|(forbidden)|(restricted)">>}
+            ],
+            AssertionsSchema
+        ]}
+    ],
+    RestrictionsSchema = [
+        {<<"type">>, <<"object">>},
+        {<<"properties">>, [
+            {<<"anapi">>, [
+                {<<"type">>, <<"object">>},
+                {<<"properties">>, [
+                    {<<"op">>, [
+                        {<<"type">>, <<"object">>},
+                        {<<"properties">>, [
+                            {<<"shops">>, [
+                                {<<"type">>, <<"array">>},
+                                {<<"items">>, [
+                                    {<<"type">>, <<"object">>},
+                                    {<<"properties">>, [
+                                        {<<"id">>, [
+                                            {<<"type">>, <<"integer">>}
+                                        ]}
+                                    ]},
+                                    {<<"required">>, [<<"id">>]}
+                                ]}
+                            ]}
+                        ]},
+                        {<<"required">>, [<<"shops">>]}
+                    ]}
+                ]},
+                {<<"required">>, [<<"op">>]}
+            ]}
+        ]}
+    ],
     [
         {<<"$schema">>, <<"http://json-schema.org/draft-04/schema#">>},
         {<<"type">>, <<"object">>},
         {<<"properties">>, [
-            {<<"allowed">>, AssertionsSchema},
-            {<<"forbidden">>, AssertionsSchema}
+            {<<"resolution">>, ResolutionSchema},
+            {<<"restrictions">>, RestrictionsSchema}
         ]},
-        {<<"additionalProperties">>, false}
+        {<<"additionalProperties">>, false},
+        {<<"required">>, [<<"resolution">>]}
     ].
 
 %%

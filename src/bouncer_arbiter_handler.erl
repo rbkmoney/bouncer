@@ -93,7 +93,36 @@ encode_resolution_legacy(forbidden) ->
 encode_resolution(allowed) ->
     {allowed, #bdcs_ResolutionAllowed{}};
 encode_resolution(forbidden) ->
-    {forbidden, #bdcs_ResolutionForbidden{}}.
+    {forbidden, #bdcs_ResolutionForbidden{}};
+encode_resolution({restricted, Restrictions}) ->
+    {forbidden, #bdcs_ResolutionRestricted{
+        restrictions = encode_restrictions(Restrictions)
+    }}.
+
+encode_restrictions(Restrictions) ->
+    #brstn_Restrictions{
+        anapi = encode_anapi_restrictions(maps:get(<<"anapi">>, Restrictions, undefined))
+    }.
+
+encode_anapi_restrictions(AnapiRestrictions) ->
+    #{
+        <<"op">> := #{
+            <<"shops">> := Shops
+        }
+    } = AnapiRestrictions,
+    #brstn_RestrictionsAnalyticsAPI{
+        op = #brstn_AnalyticsAPIOperationRestrictions{
+            shops = encode_entities(Shops)
+        }
+    };
+encode_anapi_restrictions(undefined) ->
+    undefined.
+
+encode_entities(Entities) ->
+    lists:map(fun encode_entity/1, Entities).
+
+encode_entity(#{<<"id">> := ID}) ->
+    #brstn_Entity{id = ID}.
 
 -spec decode_context(thrift_context(), st()) ->
     {bouncer_context:ctx(), st()}.
