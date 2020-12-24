@@ -104,12 +104,11 @@ encode_restrictions(Restrictions) ->
         anapi = encode_anapi_restrictions(maps:get(<<"anapi">>, Restrictions, undefined))
     }.
 
-encode_anapi_restrictions(AnapiRestrictions) ->
-    #{
-        <<"op">> := #{
-            <<"shops">> := Shops
-        }
-    } = AnapiRestrictions,
+encode_anapi_restrictions(#{
+    <<"op">> := #{
+        <<"shops">> := Shops
+    }
+}) ->
     #brstn_RestrictionsAnalyticsAPI{
         op = #brstn_AnalyticsAPIOperationRestrictions{
             shops = encode_entities(Shops)
