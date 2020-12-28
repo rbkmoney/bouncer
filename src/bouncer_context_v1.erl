@@ -56,6 +56,8 @@ from_thrift(#bctx_v1_ContextFragment{} = Ctx0) ->
 from_thrift_context(Ctx) ->
     {struct, _, [_VsnField | StructDef]} =
         bouncer_context_v1_thrift:struct_info('ContextFragment'),
+    % NOTE
+    % This 3 refers to the first data field in a ContextFragment, after version field.
     bouncer_thrift:from_thrift_struct(StructDef, Ctx, 3, #{}).
 
 -spec try_upgrade(thrift_ctx_fragment()) ->
