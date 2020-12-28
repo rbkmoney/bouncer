@@ -99,41 +99,14 @@ get_judgement_schema() ->
             AssertionsSchema
         ]}
     ],
-    RestrictionsSchema = [
-        {<<"type">>, <<"object">>},
-        {<<"properties">>, [
-            {<<"anapi">>, [
-                {<<"type">>, <<"object">>},
-                {<<"properties">>, [
-                    {<<"op">>, [
-                        {<<"type">>, <<"object">>},
-                        {<<"properties">>, [
-                            {<<"shops">>, [
-                                {<<"type">>, <<"array">>},
-                                {<<"items">>, [
-                                    {<<"type">>, <<"object">>},
-                                    {<<"properties">>, [
-                                        {<<"id">>, [
-                                            {<<"type">>, <<"integer">>}
-                                        ]}
-                                    ]},
-                                    {<<"required">>, [<<"id">>]}
-                                ]}
-                            ]}
-                        ]},
-                        {<<"required">>, [<<"shops">>]}
-                    ]}
-                ]},
-                {<<"required">>, [<<"op">>]}
-            ]}
-        ]}
-    ],
     [
         {<<"$schema">>, <<"http://json-schema.org/draft-04/schema#">>},
         {<<"type">>, <<"object">>},
         {<<"properties">>, [
             {<<"resolution">>, ResolutionSchema},
-            {<<"restrictions">>, RestrictionsSchema}
+            {<<"restrictions">>, [
+                {<<"type">>, <<"object">>}
+            ]}
         ]},
         {<<"additionalProperties">>, false},
         {<<"required">>, [<<"resolution">>]}

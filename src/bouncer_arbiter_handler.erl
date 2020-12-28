@@ -100,28 +100,8 @@ encode_resolution({restricted, Restrictions}) ->
     }}.
 
 encode_restrictions(Restrictions) ->
-    #brstn_Restrictions{
-        anapi = encode_anapi_restrictions(maps:get(<<"anapi">>, Restrictions, undefined))
-    }.
-
-encode_anapi_restrictions(#{
-    <<"op">> := #{
-        <<"shops">> := Shops
-    }
-}) ->
-    #brstn_RestrictionsAnalyticsAPI{
-        op = #brstn_AnalyticsAPIOperationRestrictions{
-            shops = encode_entities(Shops)
-        }
-    };
-encode_anapi_restrictions(undefined) ->
-    undefined.
-
-encode_entities(Entities) ->
-    lists:map(fun encode_entity/1, Entities).
-
-encode_entity(#{<<"id">> := ID}) ->
-    #brstn_Entity{id = ID}.
+    {struct, _, StructDef} = bouncer_restriction_thrift:struct_info('Restrictions'),
+    bouncer_thrift:to_thrift_struct(StructDef, Restrictions, #brstn_Restrictions{}).
 
 -spec decode_context(thrift_context(), st()) ->
     {bouncer_context:ctx(), st()}.

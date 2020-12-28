@@ -115,40 +115,4 @@ encode(thrift, Context) ->
     thrift_ctx_fragment() | no_return().
 to_thrift(Context) ->
     {struct, _, StructDef} = bouncer_context_v1_thrift:struct_info('ContextFragment'),
-    to_thrift_struct(StructDef, Context, #bctx_v1_ContextFragment{}).
-
-to_thrift_struct([{Idx, _Req, Type, Name, Default} | Rest], Map, Acc) ->
-    case maps:take(Name, Map) of
-        {V, MapLeft} ->
-            Acc1 = erlang:setelement(Idx + 1, Acc, to_thrift_value(Type, V)),
-            to_thrift_struct(Rest, MapLeft, Acc1);
-        error when Default /= undefined ->
-            Acc1 = erlang:setelement(Idx + 1, Acc, Default),
-            to_thrift_struct(Rest, Map, Acc1);
-        error ->
-            to_thrift_struct(Rest, Map, Acc)
-    end;
-to_thrift_struct([], MapLeft, Acc) ->
-    case map_size(MapLeft) of
-        0 ->
-            Acc;
-        _ ->
-            throw({?MODULE, {excess_context_data, MapLeft}})
-    end.
-
-to_thrift_value({struct, struct, {Mod, Name}}, V = #{}) ->
-    {struct, _, StructDef} = Mod:struct_info(Name),
-    Acc = erlang:make_tuple(length(StructDef) + 1, undefined, [{1, Mod:record_name(Name)}]),
-    to_thrift_struct(StructDef, V, Acc);
-to_thrift_value({set, Type}, Vs) ->
-    ordsets:from_list([to_thrift_value(Type, V) || V <- ordsets:to_list(Vs)]);
-to_thrift_value(string, V) ->
-    V;
-to_thrift_value(i64, V) ->
-    V;
-to_thrift_value(i32, V) ->
-    V;
-to_thrift_value(i16, V) ->
-    V;
-to_thrift_value(byte, V) ->
-    V.
+    bouncer_thrift:to_thrift_struct(StructDef, Context, #bctx_v1_ContextFragment{}).
