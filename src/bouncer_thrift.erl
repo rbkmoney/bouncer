@@ -22,18 +22,23 @@
     {field_num(), field_req(), field_type(), field_name(), any()}.
 
 -spec to_thrift_struct([struct_field_info()], map(), tuple()) -> tuple().
-to_thrift_struct([{Idx, _Req, Type, Name, Default} | Rest], Map, Acc) ->
+to_thrift_struct(StructDef, Map, Acc) ->
+    % NOTE
+    % This 2 refers to the first field in a record tuple.
+    to_thrift_struct(StructDef, Map, 2, Acc).
+
+to_thrift_struct([{_Tag, _Req, Type, Name, Default} | Rest], Map, Idx, Acc) ->
     case maps:take(Name, Map) of
         {V, MapLeft} ->
-            Acc1 = erlang:setelement(Idx + 1, Acc, to_thrift_value(Type, V)),
-            to_thrift_struct(Rest, MapLeft, Acc1);
+            Acc1 = erlang:setelement(Idx, Acc, to_thrift_value(Type, V)),
+            to_thrift_struct(Rest, MapLeft, Idx + 1, Acc1);
         error when Default /= undefined ->
-            Acc1 = erlang:setelement(Idx + 1, Acc, Default),
-            to_thrift_struct(Rest, Map, Acc1);
+            Acc1 = erlang:setelement(Idx, Acc, Default),
+            to_thrift_struct(Rest, Map, Idx + 1, Acc1);
         error ->
-            to_thrift_struct(Rest, Map, Acc)
+            to_thrift_struct(Rest, Map, Idx + 1, Acc)
     end;
-to_thrift_struct([], MapLeft, Acc) ->
+to_thrift_struct([], MapLeft, _Idx, Acc) ->
     case map_size(MapLeft) of
         0 ->
             Acc;
@@ -59,6 +64,8 @@ to_thrift_value(byte, V) ->
     V.
 
 from_thrift_struct(StructDef, Struct) ->
+    % NOTE
+    % This 2 refers to the first field in a record tuple.
     from_thrift_struct(StructDef, Struct, 2, #{}).
 
 -spec from_thrift_struct([struct_field_info()], tuple(), number(), map()) -> map().
