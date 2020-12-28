@@ -62,7 +62,10 @@ parse_judgement(#{<<"resolution">> := [<<"forbidden">>, Assertions]}) ->
     {forbidden, extract_assertions(Assertions)};
 parse_judgement(#{<<"resolution">> := [<<"allowed">>, Assertions]}) ->
     {allowed, extract_assertions(Assertions)};
-parse_judgement(#{<<"resolution">> := [<<"restricted">>, Assertions], <<"restrictions">> := Restrictions}) ->
+parse_judgement(#{
+    <<"resolution">> := [<<"restricted">>, Assertions],
+    <<"restrictions">> := Restrictions
+}) ->
     {{restricted, Restrictions}, extract_assertion(Assertions)}.
 
 extract_assertions(Assertions) ->

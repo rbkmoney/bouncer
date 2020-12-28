@@ -2,6 +2,7 @@
 
 %% API
 -export([to_thrift_struct/3]).
+-export([from_thrift_struct/4]).
 
 -type struct_flavour() :: struct | exception | union.
 -type field_num() :: pos_integer().
@@ -55,4 +56,36 @@ to_thrift_value(i32, V) ->
 to_thrift_value(i16, V) ->
     V;
 to_thrift_value(byte, V) ->
+    V.
+
+from_thrift_struct(StructDef, Struct) ->
+    from_thrift_struct(StructDef, Struct, 2, #{}).
+
+-spec from_thrift_struct([struct_field_info()], tuple(), number(), map()) -> map().
+from_thrift_struct([{_, _Req, Type, Name, _Default} | Rest], Struct, Idx, Acc) ->
+    Acc1 =
+        case element(Idx, Struct) of
+            V when V /= undefined ->
+                Acc#{Name => from_thrift_value(Type, V)};
+            undefined ->
+                Acc
+        end,
+    from_thrift_struct(Rest, Struct, Idx + 1, Acc1);
+from_thrift_struct([], _Struct, _, Acc) ->
+    Acc.
+
+from_thrift_value({struct, struct, {Mod, Name}}, V) ->
+    {struct, _, StructDef} = Mod:struct_info(Name),
+    from_thrift_struct(StructDef, V);
+from_thrift_value({set, Type}, Vs) ->
+    ordsets:from_list([from_thrift_value(Type, V) || V <- ordsets:to_list(Vs)]);
+from_thrift_value(string, V) ->
+    V;
+from_thrift_value(i64, V) ->
+    V;
+from_thrift_value(i32, V) ->
+    V;
+from_thrift_value(i16, V) ->
+    V;
+from_thrift_value(byte, V) ->
     V.

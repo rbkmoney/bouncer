@@ -56,37 +56,7 @@ from_thrift(#bctx_v1_ContextFragment{} = Ctx0) ->
 from_thrift_context(Ctx) ->
     {struct, _, [_VsnField | StructDef]} =
         bouncer_context_v1_thrift:struct_info('ContextFragment'),
-    from_thrift_struct(StructDef, Ctx, 3, #{}).
-
-from_thrift_struct(StructDef, Struct) ->
-    from_thrift_struct(StructDef, Struct, 2, #{}).
-
-from_thrift_struct([{_, _Req, Type, Name, _Default} | Rest], Struct, Idx, Acc) ->
-    Acc1 = case element(Idx, Struct) of
-        V when V /= undefined ->
-            Acc#{Name => from_thrift_value(Type, V)};
-        undefined ->
-            Acc
-    end,
-    from_thrift_struct(Rest, Struct, Idx + 1, Acc1);
-from_thrift_struct([], _Struct, _, Acc) ->
-    Acc.
-
-from_thrift_value({struct, struct, {Mod, Name}}, V) ->
-    {struct, _, StructDef} = Mod:struct_info(Name),
-    from_thrift_struct(StructDef, V);
-from_thrift_value({set, Type}, Vs) ->
-    ordsets:from_list([from_thrift_value(Type, V) || V <- ordsets:to_list(Vs)]);
-from_thrift_value(string, V) ->
-    V;
-from_thrift_value(i64, V) ->
-    V;
-from_thrift_value(i32, V) ->
-    V;
-from_thrift_value(i16, V) ->
-    V;
-from_thrift_value(byte, V) ->
-    V.
+    bouncer_thrift:from_thrift_struct(StructDef, Ctx, 3, #{}).
 
 -spec try_upgrade(thrift_ctx_fragment()) ->
     thrift_ctx_fragment().
