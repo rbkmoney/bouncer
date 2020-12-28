@@ -15,7 +15,7 @@
 -type ruleset_id() :: iodata().
 
 -type judgement()  :: {resolution(), [assertion()]}.
--type resolution() :: allowed | forbidden.
+-type resolution() :: allowed | forbidden | {restricted, map()}.
 -type assertion()  :: {_Code :: binary(), _Details :: #{binary() => _}}.
 
 -export_type([judgement/0]).
