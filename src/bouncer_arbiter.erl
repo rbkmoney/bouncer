@@ -35,7 +35,7 @@
 judge(RulesetID, Context) ->
     case mk_opa_client() of
         {ok, Client} ->
-            Location = join_path(RulesetID, <<"/decision">>),
+            Location = join_path(RulesetID, <<"/judgement">>),
             case request_opa_document(Location, Context, Client) of
                 {ok, Document} ->
                     infer_judgement(Document);

@@ -1,37 +1,35 @@
-package service.authz.decision
+package service.authz.judgement
 
-import data.service.authz.api
-
-decide(assertions) = d {
+judge(assertions) = jm {
     count(assertions.forbidden) > 0
-    d := {
+    jm := {
         "resolution": ["forbidden", assertions.forbidden]
     }
 }
 
-decide(assertions) = d {
+judge(assertions) = jm {
     count(assertions.forbidden) == 0
     assertions.restrictions != {}
     count(assertions.allowed) > 0
-    d := {
+    jm := {
         "resolution": ["restricted", assertions.allowed],
         "restrictions": assertions.restrictions
     }
 }
 
-decide(assertions) = d {
+judge(assertions) = jm {
     count(assertions.forbidden) == 0
     assertions.restrictions == {}
     count(assertions.allowed) > 0
-    d := {
+    jm := {
         "resolution": ["allowed", assertions.allowed]
     }
 }
 
-decide(assertions) = d {
+judge(assertions) = jm {
     count(assertions.forbidden) == 0
     count(assertions.allowed) == 0
-    d := {
+    jm := {
         "resolution": ["forbidden", []]
     }
 }
