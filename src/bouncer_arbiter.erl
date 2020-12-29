@@ -66,7 +66,7 @@ parse_judgement(#{
     <<"resolution">> := [<<"restricted">>, Assertions],
     <<"restrictions">> := Restrictions
 }) ->
-    {{restricted, Restrictions}, extract_assertion(Assertions)}.
+    {{restricted, Restrictions}, extract_assertions(Assertions)}.
 
 extract_assertions(Assertions) ->
     [extract_assertion(E) || E <- Assertions].
