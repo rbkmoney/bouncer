@@ -235,7 +235,7 @@ encode_resolution({restricted, _Restrictions}) -> <<"restricted">>.
 %% NOTE
 %% I judged adding restrictions parsing to be not worth it for audit log
 encode_restrictions({restricted, Restrictions}) ->
-    jsx:encode(Restrictions);
+    Restrictions;
 encode_restrictions(_) ->
     undefined.
 
