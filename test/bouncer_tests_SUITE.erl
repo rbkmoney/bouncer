@@ -45,7 +45,7 @@
 
 -define(OPA_HOST, "opa").
 -define(OPA_ENDPOINT, {?OPA_HOST, 8181}).
--define(API_RULESET_ID, "authz/api").
+-define(API_RULESET_ID, "service/authz/api").
 
 -spec all() ->
     [atom()].
@@ -199,7 +199,7 @@ incorrect_ruleset_invalid1(C) ->
     ),
     ?assertMatch(
         {judgement, {failed, {ruleset_invalid, [
-            {data_invalid, _, no_extra_properties_allowed, _, [<<"fordibben">>]}
+            {data_invalid, _, wrong_size, _, [<<"resolution">>]}
         ]}}},
         lists:last(flush_beats(Client, C))
     ).
@@ -212,7 +212,7 @@ incorrect_ruleset_invalid2(C) ->
     ),
     ?assertMatch(
         {judgement, {failed, {ruleset_invalid, [
-            {data_invalid, _, wrong_type, _, [<<"allowed">>]}
+            {data_invalid, _, wrong_type, _, [<<"resolution">>, _]}
         ]}}},
         lists:last(flush_beats(Client, C))
     ).
@@ -225,7 +225,7 @@ incorrect_ruleset_invalid3(C) ->
     ),
     ?assertMatch(
         {judgement, {failed, {ruleset_invalid, [
-            {data_invalid, _, missing_required_property, <<"code">>, _}
+            {data_invalid, _, no_extra_items_allowed, [<<"forbidden">>,[#{}],#{}], _}
         ]}}},
         lists:last(flush_beats(Client, C))
     ).

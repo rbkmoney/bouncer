@@ -100,7 +100,9 @@ get_judgement_schema() ->
                 {<<"pattern">>, <<"(allowed)|(forbidden)|(restricted)">>}
             ],
             AssertionsSchema
-        ]}
+        ]},
+        {<<"minItems">>, 2},
+        {<<"additionalItems">>, false}
     ],
     [
         {<<"$schema">>, <<"http://json-schema.org/draft-04/schema#">>},
