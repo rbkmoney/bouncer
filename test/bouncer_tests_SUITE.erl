@@ -225,7 +225,7 @@ incorrect_ruleset_invalid3(C) ->
     ),
     ?assertMatch(
         {judgement, {failed, {ruleset_invalid, [
-            {data_invalid, _, no_extra_items_allowed, [<<"forbidden">>,[#{}],#{}], _}
+            {data_invalid, _, no_extra_items_allowed, [<<"forbidden">>, [#{}], #{}], _}
         ]}}},
         lists:last(flush_beats(Client, C))
     ).
