@@ -97,7 +97,7 @@ get_judgement_schema() ->
         {<<"items">>, [
             [
                 {<<"type">>, <<"string">>},
-                {<<"pattern">>, <<"(allowed)|(forbidden)|(restricted)">>}
+                {<<"pattern">>, <<"allowed|forbidden|restricted">>}
             ],
             AssertionsSchema
         ]},
