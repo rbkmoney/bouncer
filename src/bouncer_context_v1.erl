@@ -71,16 +71,12 @@ try_upgrade(#bctx_v1_ContextFragment{vsn = ?BCTX_V1_HEAD} = Ctx) ->
     {ok, _Content} | {error, _}.
 encode(thrift, Context) ->
     Codec = thrift_strict_binary_codec:new(),
-    try to_thrift(Context) of
-        CtxThrift ->
-            case thrift_strict_binary_codec:write(Codec, ?THRIFT_TYPE, CtxThrift) of
-                {ok, Codec1} ->
-                    {ok, thrift_strict_binary_codec:close(Codec1)};
-                {error, _} = Error ->
-                    Error
-            end
-    catch throw:{?MODULE, Reason} ->
-        {error, Reason}
+    CtxThrift = to_thrift(Context),
+    case thrift_strict_binary_codec:write(Codec, ?THRIFT_TYPE, CtxThrift) of
+        {ok, Codec1} ->
+            {ok, thrift_strict_binary_codec:close(Codec1)};
+        {error, _} = Error ->
+            Error
     end.
 
 -spec to_thrift(bouncer_context:ctx()) ->
