@@ -95,8 +95,7 @@ encode_resolution({restricted, Restrictions}) ->
 
 encode_restrictions(Restrictions) ->
     {struct, _, StructDef} = bouncer_restriction_thrift:struct_info('Restrictions'),
-    AtomizedRestrictions = atomize(Restrictions),
-    bouncer_thrift:to_thrift_struct(StructDef, AtomizedRestrictions, #brstn_Restrictions{}).
+    bouncer_thrift:to_thrift_struct(StructDef, Restrictions, #brstn_Restrictions{}).
 
 -spec decode_context(thrift_context(), st()) ->
     {bouncer_context:ctx(), st()}.
@@ -187,24 +186,3 @@ append_pulse_metadata(Metadata, St = #st{pulse_metadata = MetadataWas}) ->
     ok.
 handle_judgement_beat(Beat, #st{pulse = Pulse, pulse_metadata = Metadata}) ->
     bouncer_arbiter_pulse:handle_beat({judgement, Beat}, Metadata, Pulse).
-
--spec atomize(Map) -> AtomicMap when
-    Map :: #{binary() => Map | term()},
-    AtomicMap :: #{atom() | binary() => AtomicMap | term()}.
-atomize(Map) ->
-    genlib_map:atomize(
-        maps:map(
-            fun
-                (_, V) when is_map(V) -> atomize(V);
-                (_, V) when is_list(V) -> lists:map(
-                    fun
-                        (El) when is_map(El) ->
-                            atomize(El);
-                        (El) -> El
-                    end,
-                    V);
-                (_, V) -> V
-            end,
-            Map
-        )
-    ).

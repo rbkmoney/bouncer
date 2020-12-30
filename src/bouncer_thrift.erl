@@ -28,7 +28,7 @@ to_thrift_struct(StructDef, Map, Acc) ->
     to_thrift_struct(StructDef, Map, 2, Acc).
 
 to_thrift_struct([{_Tag, _Req, Type, Name, Default} | Rest], Map, Idx, Acc) ->
-    case maps:take(Name, Map) of
+    case take_from_map(Name, Map) of
         {V, MapLeft} ->
             Acc1 = erlang:setelement(Idx, Acc, to_thrift_value(Type, V)),
             to_thrift_struct(Rest, MapLeft, Idx + 1, Acc1);
@@ -96,3 +96,16 @@ from_thrift_value(i16, V) ->
     V;
 from_thrift_value(byte, V) ->
     V.
+
+take_from_map(Name, Map) ->
+    case maps:take(Name, Map) of
+        {Value, MapLeft} ->
+            {Value, MapLeft};
+        error ->
+            case maps:take(genlib:to_binary(Name), Map) of
+                {Value, MapLeft} ->
+                    {Value, MapLeft};
+                error ->
+                    error
+            end
+    end.
