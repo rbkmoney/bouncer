@@ -24,34 +24,29 @@
 
 -spec json_to_thrift_struct([struct_field_info()], map(), tuple()) -> tuple().
 json_to_thrift_struct(StructDef, Map, Acc) ->
-    JsonStructDef = lists:map(
-        fun ({Tag, Req, Type, Name, Default}) ->
-            {Tag, Req, Type, genlib:to_binary(Name), Default}
-        end,
-        StructDef
-    ),
     % NOTE
     % This 2 refers to the first field in a record tuple.
-    to_thrift_struct(JsonStructDef, Map, 2, Acc, fun json_to_thrift_struct/3).
+    to_thrift_struct(StructDef, Map, 2, Acc, fun genlib:to_binary/1).
 
 -spec to_thrift_struct([struct_field_info()], map(), tuple()) -> tuple().
 to_thrift_struct(StructDef, Map, Acc) ->
     % NOTE
     % This 2 refers to the first field in a record tuple.
-    to_thrift_struct(StructDef, Map, 2, Acc, fun to_thrift_struct/3).
+    to_thrift_struct(StructDef, Map, 2, Acc, fun identity/1).
 
-to_thrift_struct([{_Tag, _Req, Type, Name, Default} | Rest], Map, Idx, Acc, ToThriftFun) ->
-    case maps:take(Name, Map) of
+to_thrift_struct([{_Tag, _Req, Type, Name, Default} | Rest], Map, Idx, Acc, NameFun) ->
+    TransformedName = NameFun(Name),
+    case maps:take(TransformedName, Map) of
         {V, MapLeft} ->
-            Acc1 = erlang:setelement(Idx, Acc, to_thrift_value(Type, V, ToThriftFun)),
-            to_thrift_struct(Rest, MapLeft, Idx + 1, Acc1, ToThriftFun);
+            Acc1 = erlang:setelement(Idx, Acc, to_thrift_value(Type, V, NameFun)),
+            to_thrift_struct(Rest, MapLeft, Idx + 1, Acc1, NameFun);
         error when Default /= undefined ->
             Acc1 = erlang:setelement(Idx, Acc, Default),
-            to_thrift_struct(Rest, Map, Idx + 1, Acc1, ToThriftFun);
+            to_thrift_struct(Rest, Map, Idx + 1, Acc1, NameFun);
         error ->
-            to_thrift_struct(Rest, Map, Idx + 1, Acc, ToThriftFun)
+            to_thrift_struct(Rest, Map, Idx + 1, Acc, NameFun)
     end;
-to_thrift_struct([], MapLeft, _Idx, Acc, _ToThriftFun) ->
+to_thrift_struct([], MapLeft, _Idx, Acc, _NameFun) ->
     case map_size(MapLeft) of
         0 ->
             Acc;
@@ -62,21 +57,21 @@ to_thrift_struct([], MapLeft, _Idx, Acc, _ToThriftFun) ->
             error({excess_data, MapLeft})
     end.
 
-to_thrift_value({struct, struct, {Mod, Name}}, V = #{}, ToThriftFun) ->
+to_thrift_value({struct, struct, {Mod, Name}}, V = #{}, NameFun) ->
     {struct, _, StructDef} = Mod:struct_info(Name),
     Acc = erlang:make_tuple(length(StructDef) + 1, undefined, [{1, Mod:record_name(Name)}]),
-    ToThriftFun(StructDef, V, Acc);
-to_thrift_value({set, Type}, Vs, ToThriftFun) ->
-    ordsets:from_list([to_thrift_value(Type, V, ToThriftFun) || V <- ordsets:to_list(Vs)]);
-to_thrift_value(string, V, _ToThriftFun) ->
+    to_thrift_struct(StructDef, V, 2, Acc, NameFun);
+to_thrift_value({set, Type}, Vs, NameFun) ->
+    ordsets:from_list([to_thrift_value(Type, V, NameFun) || V <- ordsets:to_list(Vs)]);
+to_thrift_value(string, V, _NameFun) ->
     V;
-to_thrift_value(i64, V, _ToThriftFun) ->
+to_thrift_value(i64, V, _NameFun) ->
     V;
-to_thrift_value(i32, V, _ToThriftFun) ->
+to_thrift_value(i32, V, _NameFun) ->
     V;
-to_thrift_value(i16, V, _ToThriftFun) ->
+to_thrift_value(i16, V, _NameFun) ->
     V;
-to_thrift_value(byte, V, _ToThriftFun) ->
+to_thrift_value(byte, V, _NameFun) ->
     V.
 
 from_thrift_struct(StructDef, Struct) ->
@@ -111,4 +106,7 @@ from_thrift_value(i32, V) ->
 from_thrift_value(i16, V) ->
     V;
 from_thrift_value(byte, V) ->
+    V.
+
+identity(V) ->
     V.
