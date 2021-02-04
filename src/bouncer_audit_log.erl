@@ -264,9 +264,10 @@ encode_context(Context = #{}) ->
     Context.
 
 encode_fragments(Fragments = #{}) ->
-    % TODO
-    % See above.
-    Fragments.
+    maps:map(fun encode_fragment/2, Fragments).
+
+encode_fragment(_ID, Fragment) ->
+    maps:with([type, metadata], Fragment).
 
 extract_woody_ctx(WoodyCtx = #{rpc_id := RpcID}, Acc) ->
     extract_woody_meta(WoodyCtx, extract_woody_rpc_id(RpcID, Acc));
