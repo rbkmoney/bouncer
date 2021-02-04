@@ -81,7 +81,8 @@ get_transport_opts() ->
 get_shutdown_timeout() ->
     genlib_app:env(?MODULE, shutdown_timeout, 0).
 
--spec get_handler_specs(map(), bouncer_arbiter_pulse:handlers()) -> [woody:http_handler(woody:th_handler())].
+-spec get_handler_specs(map(), bouncer_arbiter_pulse:handlers()) ->
+    [woody:http_handler(woody:th_handler())].
 get_handler_specs(ServiceOpts, AuditPulse) ->
     ArbiterService = maps:get(arbiter, ServiceOpts, #{}),
     ArbiterPulse = maps:get(pulse, ArbiterService, []),
@@ -99,7 +100,8 @@ get_stub_handler_specs(ServiceOpts) ->
     [
         {
             maps:get(path, OrgManagementStub, <<"/v1/org_management_stub">>),
-            {{orgmgmt_auth_context_provider_thrift, 'AuthContextProvider'}, bouncer_org_management_stub}
+            {{orgmgmt_auth_context_provider_thrift, 'AuthContextProvider'},
+                bouncer_org_management_stub}
         }
     ].
 

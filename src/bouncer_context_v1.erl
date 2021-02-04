@@ -24,7 +24,8 @@
 
 -type thrift_ctx_fragment() :: bouncer_context_v1_thrift:'ContextFragment'().
 
--spec decode(format(), _Content :: binary()) -> {ok, bouncer_context:ctx(), metadata()} | {error, _Reason}.
+-spec decode(format(), _Content :: binary()) ->
+    {ok, bouncer_context:ctx(), metadata()} | {error, _Reason}.
 decode(thrift, Content) ->
     Codec = thrift_strict_binary_codec:new(Content),
     case thrift_strict_binary_codec:read(Codec, ?THRIFT_TYPE) of

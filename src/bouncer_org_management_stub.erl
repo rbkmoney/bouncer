@@ -12,7 +12,8 @@
     {struct, struct, {bouncer_context_v1_thrift, 'ContextFragment'}}
 ).
 
--spec handle_function(woody:func(), woody:args(), woody_context:ctx(), woody_state:st()) -> {ok, woody:result()}.
+-spec handle_function(woody:func(), woody:args(), woody_context:ctx(), woody_state:st()) ->
+    {ok, woody:result()}.
 handle_function('GetUserContext', {UserID}, _WoodyCtx, _Opts) ->
     ContextFragmentV1 = #bctx_v1_ContextFragment{
         user = #bctx_v1_User{

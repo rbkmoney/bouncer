@@ -21,7 +21,8 @@
 
 -type st() :: #st{}.
 
--spec handle_function(woody:func(), woody:args(), woody_context:ctx(), opts()) -> {ok, woody:result()}.
+-spec handle_function(woody:func(), woody:args(), woody_context:ctx(), opts()) ->
+    {ok, woody:result()}.
 handle_function(Fn, Args, WoodyCtx, Opts) ->
     do_handle_function(Fn, Args, WoodyCtx, Opts).
 
