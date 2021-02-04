@@ -18,6 +18,6 @@ build('bouncer', 'docker-host', finalHook) {
     pipeErlangService = load("${env.JENKINS_LIB}/pipeErlangService.groovy")
   }
 
-  pipeErlangService.runPipe(true, true, 'test')
+  pipeErlangService.runPipe(true, true)
 
 }
