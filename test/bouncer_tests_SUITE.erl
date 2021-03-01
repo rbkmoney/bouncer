@@ -523,7 +523,7 @@ connect_failed_means_unavailable(C) ->
         ?assertMatch(
             [
                 {judgement, started},
-                {judgement, {failed, {unavailable, {down, {shutdown, econnrefused}}}}}
+                {judgement, {failed, {unavailable, {connection_failed, {shutdown, econnrefused}}}}}
             ],
             flush_beats(Client, C1)
         )

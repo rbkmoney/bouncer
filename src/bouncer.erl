@@ -31,6 +31,7 @@ init([]) ->
     ServiceOpts = genlib_app:env(?MODULE, services, #{}),
     EventHandlers = genlib_app:env(?MODULE, woody_event_handlers, [woody_event_handler_default]),
     Healthcheck = enable_health_logging(genlib_app:env(?MODULE, health_check, #{})),
+    OpaClient = bouncer_opa_client:init(),
     WoodySpec = woody_server:child_spec(
         ?MODULE,
         #{
@@ -41,7 +42,8 @@ init([]) ->
             shutdown_timeout => get_shutdown_timeout(),
             event_handler => EventHandlers,
             handlers =>
-                get_handler_specs(ServiceOpts, AuditPulse) ++ get_stub_handler_specs(ServiceOpts),
+                get_handler_specs(ServiceOpts, AuditPulse, OpaClient) ++
+                get_stub_handler_specs(ServiceOpts),
             additional_routes => [erl_health_handle:get_route(Healthcheck)]
         }
     ),
@@ -82,12 +84,15 @@ get_transport_opts() ->
 get_shutdown_timeout() ->
     genlib_app:env(?MODULE, shutdown_timeout, 0).
 
--spec get_handler_specs(map(), bouncer_arbiter_pulse:handlers()) ->
+-spec get_handler_specs(map(), bouncer_arbiter_pulse:handlers(), bouncer_opa_client:client()) ->
     [woody:http_handler(woody:th_handler())].
-get_handler_specs(ServiceOpts, AuditPulse) ->
+get_handler_specs(ServiceOpts, AuditPulse, OpaClient) ->
     ArbiterService = maps:get(arbiter, ServiceOpts, #{}),
     ArbiterPulse = maps:get(pulse, ArbiterService, []),
-    ArbiterOpts = #{pulse => AuditPulse ++ ArbiterPulse},
+    ArbiterOpts = #{
+        pulse => AuditPulse ++ ArbiterPulse,
+        opa_client => OpaClient
+    },
     [
         {
             maps:get(path, ArbiterService, <<"/v1/arbiter">>),
