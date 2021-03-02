@@ -60,22 +60,23 @@ request_document(RulesetID, Input, #{endpoint := Endpoint, connection_pool := Po
     try
         StreamRef = do_request(PoolPid, Endpoint, Path, Headers, Body),
         Deadline = erlang:monotonic_time(millisecond) + Timeout,
-        Result = case gunner:await(StreamRef, Timeout) of
-            {response, nofin, 200, _Headers} ->
-                TimeoutLeft = Deadline - erlang:monotonic_time(millisecond),
-                case gunner:await_body(StreamRef, TimeoutLeft) of
-                    {ok, Response, _Trailers} ->
-                        decode_document(Response);
-                    {ok, Response} ->
-                        decode_document(Response);
-                    {error, Reason} ->
-                        {error, {unknown, Reason}}
-                end;
-            {response, fin, 404, _Headers} ->
-                {error, notfound};
-            {error, Reason} ->
-                {error, {unknown, Reason}}
-        end,
+        Result =
+            case gunner:await(StreamRef, Timeout) of
+                {response, nofin, 200, _Headers} ->
+                    TimeoutLeft = Deadline - erlang:monotonic_time(millisecond),
+                    case gunner:await_body(StreamRef, TimeoutLeft) of
+                        {ok, Response, _Trailers} ->
+                            decode_document(Response);
+                        {ok, Response} ->
+                            decode_document(Response);
+                        {error, Reason} ->
+                            {error, {unknown, Reason}}
+                    end;
+                {response, fin, 404, _Headers} ->
+                    {error, notfound};
+                {error, Reason} ->
+                    {error, {unknown, Reason}}
+            end,
         _ = gunner:free(PoolPid, StreamRef),
         Result
     catch
