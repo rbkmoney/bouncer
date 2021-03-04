@@ -7,9 +7,14 @@
 
 %% API Types
 
+-type opts() :: #{
+    pool_opts := gunner:pool_opts(),
+    endpoint := gunner:endpoint()
+}.
+
 -type client() :: #{
-    endpoint := gunner:connection_args(),
-    connection_pool := gunner_pool:pool_pid()
+    endpoint := gunner:endpoint(),
+    connection_pool := gunner:pool()
 }.
 
 -type ruleset_id() :: iodata().
@@ -27,15 +32,20 @@
 -export_type([document/0]).
 
 %%
+
+-define(DEFAULT_REQUEST_TIMEOUT, 1000).
+
+%%
 %% API Functions
 %%
 
--spec init() -> client().
-init() ->
-    {ok, PoolPid} = gunner:start_pool(get_pool_opts()),
+-spec init(opts()) -> client().
+init(OpaClientOpts) ->
+    {ok, PoolPid} = gunner:start_pool(maps:get(pool_opts, OpaClientOpts)),
     #{
-        endpoint => get_opa_endpoint(),
-        connection_pool => PoolPid
+        endpoint => maps:get(endpoint, OpaClientOpts),
+        connection_pool => PoolPid,
+        request_timeout => get_request_timeout(PoolOpts)
     }.
 
 -spec request_document(_ID :: iodata(), _Input :: document(), client()) ->
@@ -44,7 +54,8 @@ init() ->
         notfound
         | {unavailable, _Reason}
         | {unknown, _Reason}}.
-request_document(RulesetID, Input, #{endpoint := Endpoint, connection_pool := PoolPid}) ->
+request_document(RulesetID, Input, Client) ->
+    #{endpoint := Endpoint, connection_pool := PoolPid, request_timeout := Timeout} = Client,
     Path = join_path(<<"/v1/data">>, join_path(RulesetID, <<"/judgement">>)),
     % TODO
     % A bit hacky, ordsets are allowed in context and supposed to be opaque, at least by design.
@@ -56,15 +67,15 @@ request_document(RulesetID, Input, #{endpoint := Endpoint, connection_pool := Po
         <<"accept">> => CType
     },
     %% TODO this is ugly
-    Timeout = get_request_timeout(),
     try
-        StreamRef = do_request(PoolPid, Endpoint, Path, Headers, Body),
         Deadline = erlang:monotonic_time(millisecond) + Timeout,
+        StreamRef = do_request(PoolPid, Endpoint, Path, Headers, Body),
+        TimeoutLeft0 = Deadline - erlang:monotonic_time(millisecond),
         Result =
-            case gunner:await(StreamRef, Timeout) of
+            case gunner:await(StreamRef, TimeoutLeft0) of
                 {response, nofin, 200, _Headers} ->
-                    TimeoutLeft = Deadline - erlang:monotonic_time(millisecond),
-                    case gunner:await_body(StreamRef, TimeoutLeft) of
+                    TimeoutLeft1 = Deadline - erlang:monotonic_time(millisecond),
+                    case gunner:await_body(StreamRef, TimeoutLeft1) of
                         {ok, Response, _Trailers} ->
                             decode_document(Response);
                         {ok, Response} ->
@@ -96,27 +107,17 @@ decode_document(Response) ->
 %%
 
 do_request(PoolPid, Endpoint, Path, Headers, Body) ->
-    case gunner:post(PoolPid, Endpoint, Path, Headers, Body, 1000) of
+    case gunner:post(PoolPid, Endpoint, Path, Headers, Body) of
         {ok, StreamRef} ->
             StreamRef;
         {error, Reason} ->
             throw({unavailable, Reason})
     end.
 
--spec get_pool_opts() -> gunner_pool:pool_opts().
-get_pool_opts() ->
-    OpaOpts = application:get_env(bouncer, opa, #{}),
-    maps:get(pool_opts, OpaOpts, #{}).
-
--spec get_opa_endpoint() -> gunner:connection_args().
-get_opa_endpoint() ->
-    OpaOpts = application:get_env(bouncer, opa, #{}),
-    maps:get(endpoint, OpaOpts, #{}).
-
--spec get_request_timeout() -> timeout().
-get_request_timeout() ->
-    ClientOpts = application:get_env(gunner, client_opts, #{}),
-    maps:get(request_timeout, ClientOpts, 1000).
+-spec get_request_timeout(gunner:pool_opts()) -> timeout().
+get_request_timeout(PoolOpts) ->
+    ClientOpts = maps:get(connection_opts, PoolOpts, #{}),
+    maps:get(request_timeout, ClientOpts, ?DEFAULT_REQUEST_TIMEOUT).
 
 %%
 

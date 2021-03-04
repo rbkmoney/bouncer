@@ -31,7 +31,7 @@ init([]) ->
     ServiceOpts = genlib_app:env(?MODULE, services, #{}),
     EventHandlers = genlib_app:env(?MODULE, woody_event_handlers, [woody_event_handler_default]),
     Healthcheck = enable_health_logging(genlib_app:env(?MODULE, health_check, #{})),
-    OpaClient = bouncer_opa_client:init(),
+    OpaClient = bouncer_opa_client:init(get_opa_opts()),
     WoodySpec = woody_server:child_spec(
         ?MODULE,
         #{
@@ -110,6 +110,10 @@ get_stub_handler_specs(ServiceOpts) ->
                 bouncer_org_management_stub}
         }
     ].
+
+-spec get_opa_opts() -> bouncer_opa_client:opts().
+get_opa_opts() ->
+    genlib_app:env(?MODULE, opa, #{}).
 
 %%
 
