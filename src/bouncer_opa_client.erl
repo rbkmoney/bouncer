@@ -2,19 +2,22 @@
 
 %% API Functions
 
--export([init/0]).
+-export([init/1]).
 -export([request_document/3]).
 
 %% API Types
 
 -type opts() :: #{
     pool_opts := gunner:pool_opts(),
-    endpoint := gunner:endpoint()
+    endpoint := gunner:endpoint(),
+    dns_resolver_ip_picker => gunner_resolver:ip_picker()
 }.
 
--type client() :: #{
+-opaque client() :: #{
     endpoint := gunner:endpoint(),
-    connection_pool := gunner:pool()
+    connection_pool := gunner:pool(),
+    request_timeout := timeout(),
+    dns_resolver_ip_picker => gunner_resolver:ip_picker()
 }.
 
 -type ruleset_id() :: iodata().
@@ -27,6 +30,7 @@
     | #{atom() | binary() => document()}
     | [document()].
 
+-export_type([opts/0]).
 -export_type([client/0]).
 -export_type([ruleset_id/0]).
 -export_type([document/0]).
@@ -41,12 +45,14 @@
 
 -spec init(opts()) -> client().
 init(OpaClientOpts) ->
-    {ok, PoolPid} = gunner:start_pool(maps:get(pool_opts, OpaClientOpts)),
-    #{
+    PoolOpts = maps:get(pool_opts, OpaClientOpts),
+    {ok, PoolPid} = gunner:start_pool(PoolOpts),
+    genlib_map:compact(#{
         endpoint => maps:get(endpoint, OpaClientOpts),
         connection_pool => PoolPid,
-        request_timeout => get_request_timeout(PoolOpts)
-    }.
+        request_timeout => get_request_timeout(PoolOpts),
+        dns_resolver_ip_picker => maps:get(dns_resolver_ip_picker, OpaClientOpts, undefined)
+    }).
 
 -spec request_document(_ID :: iodata(), _Input :: document(), client()) ->
     {ok, document()}
@@ -66,33 +72,27 @@ request_document(RulesetID, Input, Client) ->
         <<"content-type">> => CType,
         <<"accept">> => CType
     },
-    %% TODO this is ugly
-    try
-        Deadline = erlang:monotonic_time(millisecond) + Timeout,
-        StreamRef = do_request(PoolPid, Endpoint, Path, Headers, Body),
-        TimeoutLeft0 = Deadline - erlang:monotonic_time(millisecond),
-        Result =
-            case gunner:await(StreamRef, TimeoutLeft0) of
-                {response, nofin, 200, _Headers} ->
-                    TimeoutLeft1 = Deadline - erlang:monotonic_time(millisecond),
-                    case gunner:await_body(StreamRef, TimeoutLeft1) of
-                        {ok, Response, _Trailers} ->
-                            decode_document(Response);
-                        {ok, Response} ->
-                            decode_document(Response);
-                        {error, Reason} ->
-                            {error, {unknown, Reason}}
-                    end;
-                {response, fin, 404, _Headers} ->
+    Deadline = erlang:monotonic_time(millisecond) + Timeout,
+    case gunner_resolver:resolve_endpoint(Endpoint, make_resolver_opts(Client)) of
+        {ok, ResolvedEndpoint} ->
+            %% Trying the synchronous API first
+            TimeoutLeft = Deadline - erlang:monotonic_time(millisecond),
+            %%@TODO but what about acquire_timeout?
+            GunnerOpts = #{request_timeout => TimeoutLeft},
+            case gunner:post(PoolPid, ResolvedEndpoint, Path, Body, Headers, GunnerOpts) of
+                {ok, 200, _, Response} when is_binary(Response) ->
+                    decode_document(Response);
+                {ok, 404, _, _} ->
                     {error, notfound};
+                {ok, Code, _, Response} ->
+                    {error, {unknown, {Code, Response}}};
+                {error, {unknown, Reason}} ->
+                    {error, {unknown, Reason}};
                 {error, Reason} ->
-                    {error, {unknown, Reason}}
-            end,
-        _ = gunner:free(PoolPid, StreamRef),
-        Result
-    catch
-        throw:({unavailable, _} = Error) ->
-            {error, Error}
+                    {error, {unavailable, Reason}}
+            end;
+        {error, Reason} ->
+            {error, Reason}
     end.
 
 -spec decode_document(binary()) -> {ok, document()} | {error, notfound}.
@@ -106,13 +106,10 @@ decode_document(Response) ->
 
 %%
 
-do_request(PoolPid, Endpoint, Path, Headers, Body) ->
-    case gunner:post(PoolPid, Endpoint, Path, Headers, Body) of
-        {ok, StreamRef} ->
-            StreamRef;
-        {error, Reason} ->
-            throw({unavailable, Reason})
-    end.
+make_resolver_opts(#{request_timeout := Timeout, dns_resolver_ip_picker := IpPicker}) ->
+    #{timeout => Timeout, ip_picker => IpPicker};
+make_resolver_opts(#{request_timeout := Timeout}) ->
+    #{timeout => Timeout}.
 
 -spec get_request_timeout(gunner:pool_opts()) -> timeout().
 get_request_timeout(PoolOpts) ->

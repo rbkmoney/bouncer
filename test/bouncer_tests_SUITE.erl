@@ -123,7 +123,11 @@ start_bouncer(Env, C) ->
             }},
             {opa, #{
                 endpoint => ?OPA_ENDPOINT,
-                transport => tcp
+                pool_opts => #{
+                    connection_opts => #{
+                        transport => tcp
+                    }
+                }
             }}
         ] ++ Env
     ),
@@ -508,8 +512,12 @@ connect_failed_means_unavailable(C) ->
         [
             {opa, #{
                 endpoint => {?OPA_HOST, 65535},
-                transport => tcp,
-                event_handler => {ct_gun_event_h, []}
+                pool_opts => #{
+                    connection_opts => #{
+                        transport => tcp,
+                        event_handler => {ct_gun_event_h, []}
+                    }
+                }
             }}
         ],
         C
@@ -581,8 +589,12 @@ start_proxy_bouncer(Proxy, C) ->
         [
             {opa, #{
                 endpoint => ct_proxy:endpoint(Proxy),
-                transport => tcp,
-                event_handler => {ct_gun_event_h, []}
+                pool_opts => #{
+                    connection_opts => #{
+                        transport => tcp,
+                        event_handler => {ct_gun_event_h, []}
+                    }
+                }
             }}
         ],
         C

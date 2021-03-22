@@ -31,7 +31,7 @@
   0},
  {<<"gunner">>,
   {git,"git@github.com:rbkmoney/gunner.git",
-       {ref,"f3622ea33a3904e614162722efd91d37226f7664"}},
+       {ref,"fe2a29fba781be199aee9d4c408dd4662f52d474"}},
   0},
  {<<"hackney">>,{pkg,<<"hackney">>,<<"1.15.2">>},1},
  {<<"how_are_you">>,
