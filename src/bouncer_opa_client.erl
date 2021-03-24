@@ -12,16 +12,14 @@
 
 -type opts() :: #{
     pool_opts := gunner:pool_opts(),
-    endpoint := endpoint(),
-    dns_resolver_ip_picker => gunner_resolver:ip_picker()
+    endpoint := endpoint()
 }.
 
 -opaque client() :: #{
     endpoint := endpoint(),
     connection_pool := gunner:pool(),
     request_timeout := timeout(),
-    connect_timeout := timeout(),
-    dns_resolver_ip_picker => gunner_resolver:ip_picker()
+    connect_timeout := timeout()
 }.
 
 -type ruleset_id() :: iodata().
@@ -55,8 +53,7 @@ init(OpaClientOpts) ->
         endpoint => maps:get(endpoint, OpaClientOpts),
         connection_pool => PoolPid,
         request_timeout => get_request_timeout(PoolOpts),
-        connect_timeout => get_connect_timeout(PoolOpts),
-        dns_resolver_ip_picker => maps:get(dns_resolver_ip_picker, OpaClientOpts, undefined)
+        connect_timeout => get_connect_timeout(PoolOpts)
     }).
 
 -spec request_document(_ID :: iodata(), _Input :: document(), client()) ->
