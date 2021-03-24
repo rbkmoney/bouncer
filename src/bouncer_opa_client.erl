@@ -7,16 +7,20 @@
 
 %% API Types
 
+-type endpoint() :: {resolve() | inet:hostname() | inet:ip_address(), inet:port_number()}.
+-type resolve() :: {resolve, dns, inet:hostname(), #{pick => gunner_resolver:ip_picker()}}.
+
 -type opts() :: #{
     pool_opts := gunner:pool_opts(),
-    endpoint := gunner:endpoint(),
+    endpoint := endpoint(),
     dns_resolver_ip_picker => gunner_resolver:ip_picker()
 }.
 
 -opaque client() :: #{
-    endpoint := gunner:endpoint(),
+    endpoint := endpoint(),
     connection_pool := gunner:pool(),
     request_timeout := timeout(),
+    connect_timeout := timeout(),
     dns_resolver_ip_picker => gunner_resolver:ip_picker()
 }.
 
@@ -51,6 +55,7 @@ init(OpaClientOpts) ->
         endpoint => maps:get(endpoint, OpaClientOpts),
         connection_pool => PoolPid,
         request_timeout => get_request_timeout(PoolOpts),
+        connect_timeout => get_connect_timeout(PoolOpts),
         dns_resolver_ip_picker => maps:get(dns_resolver_ip_picker, OpaClientOpts, undefined)
     }).
 
@@ -61,7 +66,11 @@ init(OpaClientOpts) ->
         | {unavailable, _Reason}
         | {unknown, _Reason}}.
 request_document(RulesetID, Input, Client) ->
-    #{endpoint := Endpoint, connection_pool := PoolPid, request_timeout := Timeout} = Client,
+    #{
+        endpoint := Endpoint,
+        connection_pool := PoolPid,
+        request_timeout := RequestTimeout
+    } = Client,
     Path = join_path(<<"/v1/data">>, join_path(RulesetID, <<"/judgement">>)),
     % TODO
     % A bit hacky, ordsets are allowed in context and supposed to be opaque, at least by design.
@@ -72,28 +81,30 @@ request_document(RulesetID, Input, Client) ->
         <<"content-type">> => CType,
         <<"accept">> => CType
     },
-    Deadline = erlang:monotonic_time(millisecond) + Timeout,
-    case gunner_resolver:resolve_endpoint(Endpoint, make_resolver_opts(Client)) of
-        {ok, ResolvedEndpoint} ->
-            %% Trying the synchronous API first
-            TimeoutLeft = Deadline - erlang:monotonic_time(millisecond),
-            %%@TODO but what about acquire_timeout?
-            GunnerOpts = #{request_timeout => TimeoutLeft},
-            case gunner:post(PoolPid, ResolvedEndpoint, Path, Body, Headers, GunnerOpts) of
-                {ok, 200, _, Response} when is_binary(Response) ->
-                    decode_document(Response);
-                {ok, 404, _, _} ->
-                    {error, notfound};
-                {ok, Code, _, Response} ->
-                    {error, {unknown, {Code, Response}}};
-                {error, {unknown, Reason}} ->
-                    {error, {unknown, Reason}};
-                {error, Reason} ->
-                    {error, {unavailable, Reason}}
-            end;
-        {error, Reason} ->
-            {error, Reason}
+    Deadline = erlang:monotonic_time(millisecond) + RequestTimeout,
+    try
+        ResolvedEndpoint = resolve_endpoint(Endpoint, RequestTimeout),
+        TimeoutLeft = Deadline - erlang:monotonic_time(millisecond),
+        GunnerOpts = make_gunner_opts(TimeoutLeft, Client),
+        %% Trying the synchronous API first
+        case gunner:post(PoolPid, ResolvedEndpoint, Path, Body, Headers, GunnerOpts) of
+            {ok, 200, _, Response} when is_binary(Response) ->
+                decode_document(Response);
+            {ok, 404, _, _} ->
+                {error, notfound};
+            {ok, Code, _, Response} ->
+                {error, {unknown, {Code, Response}}};
+            {error, {unknown, Reason}} ->
+                {error, {unknown, Reason}};
+            {error, Reason} ->
+                {error, {unavailable, Reason}}
+        end
+    catch
+        throw:{resolve_failed, ResolvError} ->
+            {error, {unavailable, ResolvError}}
     end.
+
+%%
 
 -spec decode_document(binary()) -> {ok, document()} | {error, notfound}.
 decode_document(Response) ->
@@ -106,15 +117,33 @@ decode_document(Response) ->
 
 %%
 
-make_resolver_opts(#{request_timeout := Timeout, dns_resolver_ip_picker := IpPicker}) ->
-    #{timeout => Timeout, ip_picker => IpPicker};
-make_resolver_opts(#{request_timeout := Timeout}) ->
-    #{timeout => Timeout}.
+resolve_endpoint({{resolve, dns, Hostname, Opts}, Port}, Timeout) ->
+    case gunner_resolver:resolve_endpoint({Hostname, Port}, make_resolver_opts(Timeout, Opts)) of
+        {ok, ResolvedEndpoint} ->
+            ResolvedEndpoint;
+        {error, Reason} ->
+            throw({resolve_failed, Reason})
+    end;
+resolve_endpoint(Endpoint, _Timeout) ->
+    Endpoint.
+
+make_resolver_opts(Timeout, #{pick := IpPicker}) ->
+    #{timeout => Timeout, ip_picker => IpPicker}.
+
+make_gunner_opts(RequestTimeout, #{connect_timeout := ConnectTimeout}) ->
+    #{request_timeout => RequestTimeout, acquire_timeout => ConnectTimeout};
+make_gunner_opts(RequestTimeout, _Client) ->
+    #{request_timeout => RequestTimeout}.
 
 -spec get_request_timeout(gunner:pool_opts()) -> timeout().
 get_request_timeout(PoolOpts) ->
     ClientOpts = maps:get(connection_opts, PoolOpts, #{}),
     maps:get(request_timeout, ClientOpts, ?DEFAULT_REQUEST_TIMEOUT).
+
+-spec get_connect_timeout(gunner:pool_opts()) -> timeout() | undefined.
+get_connect_timeout(PoolOpts) ->
+    ClientOpts = maps:get(connection_opts, PoolOpts, #{}),
+    maps:get(connect_timeout, ClientOpts, undefined).
 
 %%
 
