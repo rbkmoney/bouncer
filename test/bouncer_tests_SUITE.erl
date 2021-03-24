@@ -45,6 +45,7 @@
 %%
 
 -define(OPA_HOST, "opa").
+-define(OPA_ENDPOINT_RESOLVE, {{resolve, dns, ?OPA_HOST, #{pick => random}}, 8181}).
 -define(OPA_ENDPOINT, {?OPA_HOST, 8181}).
 -define(API_RULESET_ID, "service/authz/api").
 
@@ -122,7 +123,7 @@ start_bouncer(Env, C) ->
                 num_acceptors => 4
             }},
             {opa, #{
-                endpoint => ?OPA_ENDPOINT,
+                endpoint => ?OPA_ENDPOINT_RESOLVE,
                 pool_opts => #{
                     connection_opts => #{
                         transport => tcp

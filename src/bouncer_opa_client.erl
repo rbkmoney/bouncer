@@ -17,7 +17,6 @@
 
 -opaque client() :: #{
     endpoint := endpoint(),
-    connection_pool := gunner:pool(),
     request_timeout := timeout(),
     connect_timeout := timeout()
 }.
@@ -40,21 +39,27 @@
 %%
 
 -define(DEFAULT_REQUEST_TIMEOUT, 1000).
+-define(GUNNER_POOL_ID, bouncer_opa_client_pool).
 
 %%
 %% API Functions
 %%
 
--spec init(opts()) -> client().
+-spec init(opts()) -> {client(), supervisor:child_spec()}.
 init(OpaClientOpts) ->
     PoolOpts = maps:get(pool_opts, OpaClientOpts),
-    {ok, PoolPid} = gunner:start_pool(PoolOpts),
-    genlib_map:compact(#{
+    PoolReg = {local, ?GUNNER_POOL_ID},
+    ChildSpec = #{
+        id => ?GUNNER_POOL_ID,
+        start => {gunner, start_pool, [PoolReg, PoolOpts]},
+        restart => temporary
+    },
+    Client = genlib_map:compact(#{
         endpoint => maps:get(endpoint, OpaClientOpts),
-        connection_pool => PoolPid,
         request_timeout => get_request_timeout(PoolOpts),
         connect_timeout => get_connect_timeout(PoolOpts)
-    }).
+    }),
+    {Client, ChildSpec}.
 
 -spec request_document(_ID :: iodata(), _Input :: document(), client()) ->
     {ok, document()}
@@ -65,7 +70,6 @@ init(OpaClientOpts) ->
 request_document(RulesetID, Input, Client) ->
     #{
         endpoint := Endpoint,
-        connection_pool := PoolPid,
         request_timeout := RequestTimeout
     } = Client,
     Path = join_path(<<"/v1/data">>, join_path(RulesetID, <<"/judgement">>)),
@@ -84,7 +88,7 @@ request_document(RulesetID, Input, Client) ->
         TimeoutLeft = Deadline - erlang:monotonic_time(millisecond),
         GunnerOpts = make_gunner_opts(TimeoutLeft, Client),
         %% Trying the synchronous API first
-        case gunner:post(PoolPid, ResolvedEndpoint, Path, Body, Headers, GunnerOpts) of
+        case gunner:post(?GUNNER_POOL_ID, ResolvedEndpoint, Path, Body, Headers, GunnerOpts) of
             {ok, 200, _, Response} when is_binary(Response) ->
                 decode_document(Response);
             {ok, 404, _, _} ->
