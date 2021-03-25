@@ -49,7 +49,7 @@ init([]) ->
     ),
     {ok, {
         #{strategy => one_for_one, intensity => 10, period => 10},
-        AuditSpecs ++ [WoodySpec, OpaClientSpec]
+        AuditSpecs ++ [OpaClientSpec, WoodySpec]
     }}.
 
 -spec get_audit_specs() -> {[supervisor:child_spec()], bouncer_arbiter_pulse:handlers()}.

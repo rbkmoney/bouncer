@@ -51,8 +51,7 @@ init(OpaClientOpts) ->
     PoolReg = {local, ?GUNNER_POOL_ID},
     ChildSpec = #{
         id => ?GUNNER_POOL_ID,
-        start => {gunner, start_pool, [PoolReg, PoolOpts]},
-        restart => temporary
+        start => {gunner_pool, start_link, [PoolReg, PoolOpts]}
     },
     Client = genlib_map:compact(#{
         endpoint => maps:get(endpoint, OpaClientOpts),
