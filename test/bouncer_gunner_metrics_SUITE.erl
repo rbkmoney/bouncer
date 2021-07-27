@@ -193,13 +193,3 @@ stop_bouncer(C) ->
         C,
         fun(Apps) -> genlib_app:stop_unload_applications(Apps) end
     ).
-
-%%
-
-encode_group({IP, Port}) when is_tuple(IP) ->
-    encode_group({inet:ntoa(IP), Port});
-encode_group({Host, Port}) when is_list(Host) ->
-    encode_group(list_to_binary(Host), integer_to_binary(Port)).
-
-encode_group(Host, Port) ->
-    <<Host/binary, ":", Port/binary>>.
