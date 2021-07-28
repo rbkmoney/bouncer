@@ -210,10 +210,10 @@ create_metric(Type, Key, Value) ->
 
 %%
 
--define(_10US, "10μs").
--define(_50US, "50μs").
--define(_100US, "100μs").
--define(_500US, "500μs").
+-define(_10US, "10us").
+-define(_50US, "50us").
+-define(_100US, "100us").
+-define(_500US, "500us").
 -define(_1MS, "1ms").
 -define(_5MS, "5ms").
 -define(_10MS, "10ms").
@@ -235,7 +235,7 @@ build_bin_key(Value) ->
         Value < 10 -> ?LT(?_10US);
         Value < 50 -> ?BETWEEN(?_10US, ?_50US);
         Value < 100 -> ?BETWEEN(?_50US, ?_100US);
-        Value < 500 -> ?BETWEEN(?_100US, ?_100US);
+        Value < 500 -> ?BETWEEN(?_100US, ?_500US);
         Value < 1000 -> ?BETWEEN(?_500US, ?_1MS);
         Value < 5 * 1000 -> ?BETWEEN(?_1MS, ?_5MS);
         Value < 10 * 1000 -> ?BETWEEN(?_5MS, ?_10MS);
