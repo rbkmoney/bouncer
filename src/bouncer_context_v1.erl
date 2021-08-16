@@ -61,6 +61,9 @@ from_thrift_context(Ctx) ->
 
 -spec try_upgrade(thrift_ctx_fragment()) -> thrift_ctx_fragment().
 try_upgrade(#bctx_v1_ContextFragment{vsn = 1} = Ctx) ->
+    % TODO #ED-124 #ED-162 rbkmoney/bouncer-policies#46
+    % tokens.replacement_ip -> client_info.ip
+    % удалить после выкатки capi_pcidss|bouncer-proto без bctx_v1_ContextTokens
     ContextCAPI =
         case Ctx#bctx_v1_ContextFragment.tokens of
             #bctx_v1_ContextTokens{replacement_ip = undefined} ->
