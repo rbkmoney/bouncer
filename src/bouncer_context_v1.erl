@@ -61,7 +61,10 @@ from_thrift_context(Ctx) ->
 
 -spec try_upgrade(thrift_ctx_fragment()) -> thrift_ctx_fragment().
 try_upgrade(#bctx_v1_ContextFragment{vsn = 1} = Ctx) ->
-    Ctx;
+    % no legacy data producers
+    % legacy structures have been removed
+    % nothing to update
+    Ctx#bctx_v1_ContextFragment{vsn = ?BCTX_V1_HEAD};
 try_upgrade(#bctx_v1_ContextFragment{vsn = ?BCTX_V1_HEAD} = Ctx) ->
     Ctx.
 
